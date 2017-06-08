@@ -20,7 +20,7 @@ import java.util.List;
 class AlertListAdapter extends RecyclerView.Adapter {
     private static final int PENDING_REMOVAL_TIMEOUT = 2000; // 3sec
 
-    List<String> items;
+    ArrayList<String> items;
     private List<String> itemsPendingRemoval;
     private int lastInsertedIndex; // so we can add some more items for testing purposes
     boolean undoOn = false; // is undo on, you can turn it on from the toolbar menu
@@ -31,16 +31,8 @@ class AlertListAdapter extends RecyclerView.Adapter {
     OnItemClickListener mItemClickListener;
 
     public AlertListAdapter() {
-
         items = new ArrayList<>();
         itemsPendingRemoval = new ArrayList<>();
-
-        // let's generate some items
-        lastInsertedIndex = 5;
-        // this should give us a couple of screens worth
-        for (int i=1; i<= lastInsertedIndex; i++) {
-            items.add("Item " + i);
-        }
     }
 
     public void addAlert(String sAlert) {
@@ -156,16 +148,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
         this.mItemClickListener = mItemClickListener;
     }
 
-    @Override
-    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
-        super.onAttachedToRecyclerView(recyclerView);
-    }
-
-    @Override
-    public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {
-        super.onViewAttachedToWindow(holder);
-    }
-
     /**
      * ViewHolder capable of presenting two states: "normal" and "undo" state.
      */
@@ -180,22 +162,10 @@ class AlertListAdapter extends RecyclerView.Adapter {
             undoButton = (Button) itemView.findViewById(R.id.undo_button);
 
             itemView.setOnClickListener(this);
-
-        /*
-        itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Snackbar.make(v, "[ADAPTER] Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-        */
-
         }
 
         @Override
         public void onClick(View v) {
-            System.out.println("onClick");
             //titleTextView;
             mItemClickListener.onItemClick(v, getAdapterPosition(), this.titleTextView.getText().toString());
 

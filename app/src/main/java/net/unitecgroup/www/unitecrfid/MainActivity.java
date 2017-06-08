@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         AddAlertDialog.OnAlertSavedListener {
 
+    private static final String ALERT_LIST = "alertList";
     AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
 
@@ -71,13 +72,21 @@ public class MainActivity extends AppCompatActivity
 
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
+        oAlertListAdapter = new AlertListAdapter();
+
+        //Create Fake Alerts just for demo
+        if (savedInstanceState == null) {
+            oAlertListAdapter.addItems(5);
+        }
+
         setUpRecyclerView();
 
     }
 
     private void setUpRecyclerView() {
-        oAlertListAdapter = new AlertListAdapter();
+
         oAlertListAdapter.setUndoOn(true);
+        //mRecyclerView.setLayoutManager(new GridLayoutManager(this,2));
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(oAlertListAdapter);
         mRecyclerView.setHasFixedSize(true);
@@ -310,6 +319,25 @@ public class MainActivity extends AppCompatActivity
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
+
+        super.onSaveInstanceState(outState);
+    }
+
+    // This callback is called only when there is a saved instance previously saved using
+    // onSaveInstanceState(). We restore some state in onCreate() while we can optionally restore
+    // other state here, possibly usable after onStart() has completed.
+    // The savedInstanceState Bundle is same as the one used in onCreate().
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
+    }
+
+
+
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override

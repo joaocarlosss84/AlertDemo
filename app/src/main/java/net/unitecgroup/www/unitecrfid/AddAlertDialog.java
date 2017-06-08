@@ -45,8 +45,17 @@ public class AddAlertDialog extends DialogFragment {
     private TextView oTextViewTime;
     private TextView oTextViewDuration;
     private HashSet oSelectedWeekdays = new HashSet<>();
+    private String sTitle = "Add Alert";
 
     OnAlertSavedListener oAlertListener;
+    private int iTimerPickerTheme = android.R.style.Theme_Holo_Dialog; //Theme_Holo_Dialog_NoActionBar_MinWidth;
+
+    public void AddAlertDialog(String sTitle) {
+        this.sTitle = sTitle;
+    }
+
+    public void AddAlertDialog() {
+    }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState){
@@ -61,7 +70,7 @@ public class AddAlertDialog extends DialogFragment {
         //Configure Dialog with Save and Cancel buttons
         oDialogBuilder
                 .setView(oDialogView)
-                .setIcon(R.drawable.ic_menu_camera)
+                //.setIcon(R.drawable.ic_menu_camera)
                 .setTitle("Add Alert")
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
@@ -107,18 +116,46 @@ public class AddAlertDialog extends DialogFragment {
 
             @Override
             public void onClick(View v) {
-                TimePickerDialog tp1 = new TimePickerDialog(getContext(), TimePickerListener, Calendar.HOUR_OF_DAY, Calendar.MINUTE, true);
+                //TimePickerDialog tp1 = new TimePickerDialog(getContext(), TimePickerListener, Calendar.HOUR_OF_DAY, Calendar.MINUTE, true);
+                int theme = 0;
+                // Get a Calendar instance
+                //final Calendar calendar = Calendar.getInstance();
+
+                TimePickerDialog tp1 = new TimePickerDialog(getContext(), iTimerPickerTheme, TimePickerListener, Calendar.HOUR, Calendar.MINUTE, true);
+
+                //not a new alert
+                if (!oTextViewTime.getText().toString().equals("00:00")) {
+                    String[] aTime = oTextViewTime.getText().toString().split(":");
+
+                    try {
+                        tp1.updateTime(Integer.parseInt(aTime[0]), Integer.parseInt(aTime[1]));
+                    } catch (NumberFormatException e) {
+                        e.printStackTrace();
+                    }
+                }
                 tp1.show();
             }
         });
 
-        //Setting the Time Button OnClick
+        //Setting the Duration Button OnClick
         Button setDuration;
         setDuration = (Button) oDialogView.findViewById(R.id.buttonSetDuration);
         setDuration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TimePickerDialog tp1 = new TimePickerDialog(getContext(), DurationPickerListener, 0, 0, true);
+                //TimePickerDialog tp1 = new TimePickerDialog(getContext(), DurationPickerListener, 0, 0, true);
+                TimePickerDialog tp1 = new TimePickerDialog(getContext(), iTimerPickerTheme, DurationPickerListener, 0, 0, true);
+
+                if (!oTextViewDuration.getText().toString().equals("00:00")) {
+                    String[] aTime = oTextViewDuration.getText().toString().split(":");
+
+                    try {
+                        tp1.updateTime(Integer.parseInt(aTime[0]), Integer.parseInt(aTime[1]));
+                    } catch (NumberFormatException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 tp1.show();
             }
         });
@@ -126,8 +163,9 @@ public class AddAlertDialog extends DialogFragment {
         AlertDialog oAlertDialog = oDialogBuilder.create();
 
         return oAlertDialog;
-
     }
+
+
 
     private void setupWeekdays(View oDialogView) {
         LinearLayout oWeekdayGroup = (LinearLayout) oDialogView.findViewById(R.id.weekdayGroup);
