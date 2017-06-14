@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.icu.util.Calendar;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -49,10 +50,11 @@ public class AddAlertDialog extends DialogFragment {
     private String sTitle = "Add Alert";
     public  Boolean bAdd = true;
 
-    private int _id;
+    private int _id = -1;
 
     OnAlertSavedListener oAlertListener;
-    private int iTimerPickerTheme = android.R.style.Theme_Holo_Dialog; //Theme_Holo_Dialog_NoActionBar_MinWidth;
+    private int iTimerPickerTheme = 0;
+    //private int iTimerPickerTheme = android.R.style.Theme_Holo_Dialog; //Theme_Holo_Dialog_NoActionBar_MinWidth;
 
     public void AddAlertDialog(String sTitle) {
         this.sTitle = sTitle;
@@ -75,7 +77,6 @@ public class AddAlertDialog extends DialogFragment {
         oTextViewTime = (TextView) oDialogView.findViewById(R.id.textViewTime);
         oTextViewDuration = (TextView) oDialogView.findViewById(R.id.textViewDuration);
 
-
         if (args != null) {
             _id = args.getInt(ALERT_ID);
             oTextViewTime.setText(args.getString(ALERT_TIME));
@@ -84,14 +85,19 @@ public class AddAlertDialog extends DialogFragment {
             oSelectedWeekdays.addAll(aWeekdays);
         }
 
-
         //Configure Dialog with Save and Cancel buttons
         oDialogBuilder
                 .setView(oDialogView)
                 //.setIcon(R.drawable.ic_menu_camera)
                 .setTitle(sTitle)
+                .setPositiveButton("Save", null)
+/*
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
+
+
+                        Snackbar.make(oTextViewTime.getRootView(), "Replace with your own action", Snackbar.LENGTH_LONG)
+                                .setAction("Action", null).show();
 
                         // Send the event to the host activity
                         oAlertListener.OnAlertSavedListener(_id,
@@ -101,6 +107,7 @@ public class AddAlertDialog extends DialogFragment {
 
                     }
                 })
+*/
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
 
@@ -168,6 +175,42 @@ public class AddAlertDialog extends DialogFragment {
         });
 
         AlertDialog oAlertDialog = oDialogBuilder.create();
+
+
+        //Overwrite the Save button to add verification
+        oAlertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+
+            @Override
+            public void onShow(DialogInterface dialog) {
+
+                Button button = ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_POSITIVE);
+                button.setOnClickListener(new View.OnClickListener() {
+
+                    @Override
+                    public void onClick(View view) {
+                        // Alert Validation
+                        if (oSelectedWeekdays.size() == 0) {
+                            Snackbar.make(view, "Please select weekdays", Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
+
+                        } else if (oTextViewDuration.getText().equals("00:00")) {
+                            Snackbar.make(view, "Please define a duration", Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
+                        } else {
+                            // Send the event to the host activity
+                            oAlertListener.OnAlertSavedListener(_id,
+                                    oTextViewTime.getText() + " - "
+                                            + oTextViewDuration.getText() + " - "
+                                            + oSelectedWeekdays.toString());
+
+                            //Dismiss once everything is OK.
+                            getDialog().dismiss();
+                        }
+                    }
+                });
+            }
+        });
+
 
         return oAlertDialog;
     }
