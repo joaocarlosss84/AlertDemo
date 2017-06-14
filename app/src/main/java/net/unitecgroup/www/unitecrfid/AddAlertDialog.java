@@ -38,6 +38,7 @@ import static java.util.Calendar.WEDNESDAY;
 
 public class AddAlertDialog extends DialogFragment {
 
+    public static final String ALERT_ID = "alertID";
     public static final String ALERT_TIME = "alertTime";
     public static final String ALERT_DURATION = "alertDuration";
     public static final String ALERT_WEEKDAYS = "alertWeekdays";
@@ -46,6 +47,9 @@ public class AddAlertDialog extends DialogFragment {
     private TextView oTextViewDuration;
     private HashSet oSelectedWeekdays = new HashSet<>();
     private String sTitle = "Add Alert";
+    public  Boolean bAdd = true;
+
+    private int _id;
 
     OnAlertSavedListener oAlertListener;
     private int iTimerPickerTheme = android.R.style.Theme_Holo_Dialog; //Theme_Holo_Dialog_NoActionBar_MinWidth;
@@ -67,16 +71,30 @@ public class AddAlertDialog extends DialogFragment {
         LayoutInflater inflater = (LayoutInflater) getActivity().getBaseContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View oDialogView = inflater.inflate(R.layout.add_alert_dialog, null);
 
+        //Configure TextViews:
+        oTextViewTime = (TextView) oDialogView.findViewById(R.id.textViewTime);
+        oTextViewDuration = (TextView) oDialogView.findViewById(R.id.textViewDuration);
+
+
+        if (args != null) {
+            _id = args.getInt(ALERT_ID);
+            oTextViewTime.setText(args.getString(ALERT_TIME));
+            oTextViewDuration.setText(args.getString(ALERT_DURATION));
+            ArrayList<Integer> aWeekdays = args.getIntegerArrayList(ALERT_WEEKDAYS);
+            oSelectedWeekdays.addAll(aWeekdays);
+        }
+
+
         //Configure Dialog with Save and Cancel buttons
         oDialogBuilder
                 .setView(oDialogView)
                 //.setIcon(R.drawable.ic_menu_camera)
-                .setTitle("Add Alert")
+                .setTitle(sTitle)
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
 
                         // Send the event to the host activity
-                        oAlertListener.OnAlertSavedListener(
+                        oAlertListener.OnAlertSavedListener(_id,
                                 oTextViewTime.getText() + " - "
                                 + oTextViewDuration.getText() + " - "
                                 + oSelectedWeekdays.toString());
@@ -93,17 +111,6 @@ public class AddAlertDialog extends DialogFragment {
         //Configure timePicker
         //TimePicker oTimePicker = (TimePicker) oDialogView.findViewById(R.id.timePicker);
         //oTimePicker.setIs24HourView(true);
-
-        //Configure TextViews:
-        oTextViewTime = (TextView) oDialogView.findViewById(R.id.textViewTime);
-        oTextViewDuration = (TextView) oDialogView.findViewById(R.id.textViewDuration);
-
-        if (args != null) {
-            oTextViewTime.setText(args.getString(ALERT_TIME));
-            oTextViewDuration.setText(args.getString(ALERT_DURATION));
-            ArrayList<Integer> aWeekdays = args.getIntegerArrayList(ALERT_WEEKDAYS);
-            oSelectedWeekdays.addAll(aWeekdays);
-        }
 
         //Configure Weekday Checkboxes
         setupWeekdays(oDialogView);
@@ -249,7 +256,7 @@ public class AddAlertDialog extends DialogFragment {
 
     // Container Activity must implement this interface
     public interface OnAlertSavedListener {
-        public void OnAlertSavedListener(String alertTime);
+        public void OnAlertSavedListener(int id, String alertTime);
     }
 
     //Attach the activy that call AddAlertDialog to callback

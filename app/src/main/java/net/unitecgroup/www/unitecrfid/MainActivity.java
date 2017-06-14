@@ -1,5 +1,6 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.app.Fragment;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -18,13 +19,16 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
+import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
@@ -34,12 +38,14 @@ public class MainActivity extends AppCompatActivity
         AddAlertDialog.OnAlertSavedListener {
 
     private static final String ALERT_LIST = "alertList";
+    private static final String ALERT_DELETE_LIST = "alertDeleteList";
     AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
 
     FragmentManager fm = getSupportFragmentManager();
     AddAlertDialog oAddAlert;
 
+    DatabaseTable mDB;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,12 +80,44 @@ public class MainActivity extends AppCompatActivity
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
         oAlertListAdapter = new AlertListAdapter();
 
+        mDB = new DatabaseTable(this);
+
         //Create Fake Alerts just for demo
         if (savedInstanceState == null) {
-            oAlertListAdapter.addItems(5);
+            //oAlertListAdapter.addItems(5);
+
+            //This will erase the DB content
+            mDB.deleteAll();
+
+            /**
+             * CRUD Operations
+             * */
+            // Inserting Contacts
+
+            Log.d("Insert: ", "Inserting ..");
+            mDB.addAlert(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
+            mDB.addAlert(new Alert("12:00", "00:30", "[2,3]"));
+            mDB.addAlert(new Alert("18:30", "00:10", "[4,5,6]"));
+
+
+
+            // Reading all contacts
+            Log.d("Reading: ", "Reading all alerts..");
+            List<Alert> alerts = mDB.getAllAlerts();
+
+            for (Alert cn : alerts) {
+                String log = "Id: " + cn.get_id() + " , Time: " + cn.get_time() + " , Duration: " + cn.get_duration();
+                // Writing Contacts to log
+                oAlertListAdapter.addAlert(cn.toString());
+                Log.d("Name: ", log);
+            }
+
+
         }
 
         setUpRecyclerView();
+
+
 
     }
 
@@ -90,18 +128,29 @@ public class MainActivity extends AppCompatActivity
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(oAlertListAdapter);
         mRecyclerView.setHasFixedSize(true);
+
+        //Create the Alert Edit Dialog, load the previous data.
         oAlertListAdapter.SetOnItemClickListener(
             new AlertListAdapter.OnItemClickListener() {
                 @Override
                 public void onItemClick(View view, int position, String id) {
                     Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
-                    args.putString(ALERT_TIME, "06:30");
-                    args.putString(ALERT_DURATION, "00:15");
-                    args.putIntegerArrayList(ALERT_WEEKDAYS, new ArrayList<Integer>(Arrays.asList(2,6)));
 
-                    oAddAlert = new AddAlertDialog();
-                    oAddAlert.setArguments(args);
-                    oAddAlert.show(fm, "Dialog Fragment");
+                    //Split the Row String data to save into the Alert Dialog
+                    String sAlert = oAlertListAdapter.items.get(position);
+                    String[] aAlert = TextUtils.split(sAlert, "-");
+
+                    if (aAlert.length == 3) {
+                        args.putInt(ALERT_ID, position);
+                        args.putString(ALERT_TIME, aAlert[0].trim());
+                        args.putString(ALERT_DURATION, aAlert[1].trim());
+                        //Creates a ArrayList<Integer> from String "[1,2,3]"
+                        args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(aAlert[2].trim()));
+
+                        oAddAlert = new AddAlertDialog();
+                        oAddAlert.setArguments(args);
+                        oAddAlert.show(fm, "Dialog Fragment");
+                    }
                 }
             }
         );
@@ -110,6 +159,16 @@ public class MainActivity extends AppCompatActivity
         setUpAnimationDecoratorHelper();
     }
 
+
+    public static ArrayList<Integer> arrayStringToIntegerArrayList(String arrayString){
+        String removedBrackets = arrayString.substring(1, arrayString.length() - 1);
+        String[] individualNumbers = removedBrackets.split(",");
+        ArrayList<Integer> integerArrayList = new ArrayList<>();
+        for(String numberString : individualNumbers){
+            integerArrayList.add(Integer.parseInt(numberString.trim()));
+        }
+        return integerArrayList;
+    }
 
     /**
      * This is the standard support library way of implementing "swipe to delete" feature. You can do custom drawing in onChildDraw method
@@ -323,6 +382,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
+        outState.putStringArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
+        //outState.pu
 
         super.onSaveInstanceState(outState);
     }
@@ -334,10 +395,9 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
+        oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getStringArrayList(ALERT_DELETE_LIST);
+
     }
-
-
-
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
@@ -345,8 +405,13 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
+        Fragment fragment = null;
+        String title = getString(R.string.app_name);
+
         if (id == R.id.nav_camera) {
             // Handle the camera action
+            //fragment = new NFCActivity();
+            //title  = "NFC";
         } else if (id == R.id.nav_gallery) {
 
         } else if (id == R.id.nav_slideshow) {
@@ -358,6 +423,18 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_send) {
 
         }
+/*
+        if (fragment != null) {
+            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            ft.replace(R.id.content_frame, fragment);
+            ft.commit();
+        }
+
+        // set the toolbar title
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(title);
+        }
+*/
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -366,7 +443,12 @@ public class MainActivity extends AppCompatActivity
 
     //Executed once the AddAlert is saved
     @Override
-    public void OnAlertSavedListener(String alertTime) {
-        oAlertListAdapter.addAlert(alertTime);
+    public void OnAlertSavedListener(int id, String alertTime) {
+        if (id < 0) {
+            oAlertListAdapter.addAlert(alertTime);
+        } else {
+            oAlertListAdapter.updateAlert(id, alertTime);
+        }
     }
+
 }

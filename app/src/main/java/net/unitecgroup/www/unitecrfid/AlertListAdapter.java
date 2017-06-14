@@ -11,7 +11,6 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by 20006030 on 05/06/2017.
@@ -21,7 +20,7 @@ class AlertListAdapter extends RecyclerView.Adapter {
     private static final int PENDING_REMOVAL_TIMEOUT = 2000; // 3sec
 
     ArrayList<String> items;
-    private List<String> itemsPendingRemoval;
+    ArrayList<String> itemsPendingRemoval;
     private int lastInsertedIndex; // so we can add some more items for testing purposes
     boolean undoOn = false; // is undo on, you can turn it on from the toolbar menu
 
@@ -96,6 +95,16 @@ class AlertListAdapter extends RecyclerView.Adapter {
             }
             lastInsertedIndex = lastInsertedIndex + howMany;
         }
+
+
+    }
+
+    public void updateAlert(int pos, String sAlert) {
+        //test if position exists
+        if (items.get(pos) != null) {
+            items.set(pos, sAlert);
+            notifyItemChanged(pos);
+        }
     }
 
     public void setUndoOn(boolean undoOn) {
@@ -116,7 +125,8 @@ class AlertListAdapter extends RecyclerView.Adapter {
             Runnable pendingRemovalRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    remove(items.indexOf(item));
+                    int pos = items.indexOf(item);
+                    remove(pos);
                 }
             };
             handler.postDelayed(pendingRemovalRunnable, PENDING_REMOVAL_TIMEOUT);
@@ -166,18 +176,7 @@ class AlertListAdapter extends RecyclerView.Adapter {
 
         @Override
         public void onClick(View v) {
-            //titleTextView;
             mItemClickListener.onItemClick(v, getAdapterPosition(), this.titleTextView.getText().toString());
-
-            /*
-
-            //FragmentManager fm = this.getSupportFragmentManager();
-            AddAlertDialog oAddAlert = new AddAlertDialog();
-            oAddAlert.show(fm, "Dialog Fragment");
-
-            Snackbar.make(v, "[ADAPTER] Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show();
-            */
         }
     }
 
