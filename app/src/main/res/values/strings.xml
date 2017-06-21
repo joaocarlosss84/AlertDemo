@@ -7,4 +7,6 @@
     <string name="action_settings">Settings</string>
     <string name="button_undo">undo</string>
     <string name="search_title">Search</string>
+    <string name="action_addAlerts">Add Alerts</string>
+    <string name="action_removeAlerts">Remove Alerts</string>
 </resources>

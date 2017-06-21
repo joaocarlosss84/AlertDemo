@@ -84,18 +84,13 @@ class AlertListAdapter extends RecyclerView.Adapter {
         return items.size();
     }
 
-    /**
-     *  Utility method to add some rows for testing purposes. You can add rows from the toolbar menu.
-     */
-    public void addItems(int howMany){
-        if (howMany > 0) {
-            for (int i = lastInsertedIndex + 1; i <= lastInsertedIndex + howMany; i++) {
-                items.add("Item " + i);
-                notifyItemInserted(items.size() - 1);
-            }
-            lastInsertedIndex = lastInsertedIndex + howMany;
-        }
+    public void removeAll() {
+        itemsPendingRemoval.clear();
 
+        int iMax = items.size();
+        items.clear();
+
+        notifyItemRangeRemoved(0, iMax);
 
     }
 

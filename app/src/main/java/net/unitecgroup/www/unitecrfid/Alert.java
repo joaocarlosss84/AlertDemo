@@ -62,6 +62,6 @@ public class Alert {
 
     @Override
     public String toString() {
-        return this._time + " - " + this._duration + " - " + this._weekdays;
+        return this._id + " - " + this._time + " - " + this._duration + " - " + this._weekdays;
     }
 }

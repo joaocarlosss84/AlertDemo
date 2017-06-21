@@ -20,7 +20,7 @@ import android.widget.TimePicker;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.TreeSet;
 
 import static java.util.Calendar.FRIDAY;
 import static java.util.Calendar.MONDAY;
@@ -46,7 +46,8 @@ public class AddAlertDialog extends DialogFragment {
 
     private TextView oTextViewTime;
     private TextView oTextViewDuration;
-    private HashSet oSelectedWeekdays = new HashSet<>();
+    //TreeSet will insert integers in order
+    private TreeSet oSelectedWeekdays = new TreeSet<>();
     private String sTitle = "Add Alert";
     public  Boolean bAdd = true;
 
@@ -198,11 +199,22 @@ public class AddAlertDialog extends DialogFragment {
                                     .setAction("Action", null).show();
                         } else {
                             // Send the event to the host activity
-                            oAlertListener.OnAlertSavedListener(_id,
-                                    oTextViewTime.getText() + " - "
-                                            + oTextViewDuration.getText() + " - "
-                                            + oSelectedWeekdays.toString());
+                            //Collections.sort(oSelectedWeekdays);
+                            Alert oAlert = new Alert();
+                            oAlert.set_id(_id);
+                            oAlert.set_time(oTextViewTime.getText().toString());
+                            oAlert.set_duration(oTextViewDuration.getText().toString());
+                            oAlert.set_weekdays(oSelectedWeekdays.toString());
 
+                            oAlertListener.OnAlertSavedListener(oAlert);
+
+                            /*
+                            oAlertListener.OnAlertSavedListener(_id,
+                                    String.valueOf(_id) + " - " +
+                                    oTextViewTime.getText() + " - " +
+                                    oTextViewDuration.getText() + " - " +
+                                    oSelectedWeekdays.toString());
+                            */
                             //Dismiss once everything is OK.
                             getDialog().dismiss();
                         }
@@ -299,7 +311,8 @@ public class AddAlertDialog extends DialogFragment {
 
     // Container Activity must implement this interface
     public interface OnAlertSavedListener {
-        public void OnAlertSavedListener(int id, String alertTime);
+        //public void OnAlertSavedListener(int id, String alertTime);
+        public void OnAlertSavedListener(Alert oAlert);
     }
 
     //Attach the activy that call AddAlertDialog to callback

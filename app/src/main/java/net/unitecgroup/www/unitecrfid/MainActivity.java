@@ -26,10 +26,11 @@ import android.view.MenuItem;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
+import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
 
@@ -60,8 +61,6 @@ public class MainActivity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                //        .setAction("Action", null).show();
                 oAddAlert = new AddAlertDialog();
                 oAddAlert.show(fm, "Dialog Fragment");
             }
@@ -86,19 +85,12 @@ public class MainActivity extends AppCompatActivity
         if (savedInstanceState == null) {
             //oAlertListAdapter.addItems(5);
 
-            //This will erase the DB content
-            mDB.deleteAll();
 
             /**
              * CRUD Operations
              * */
             // Inserting Contacts
-
-            Log.d("Insert: ", "Inserting ..");
-            mDB.addAlert(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
-            mDB.addAlert(new Alert("12:00", "00:30", "[2,3]"));
-            mDB.addAlert(new Alert("18:30", "00:10", "[4,5,6]"));
-
+            //addAlerts();
 
 
             // Reading all contacts
@@ -140,12 +132,12 @@ public class MainActivity extends AppCompatActivity
                     String sAlert = oAlertListAdapter.items.get(position);
                     String[] aAlert = TextUtils.split(sAlert, "-");
 
-                    if (aAlert.length == 3) {
-                        args.putInt(ALERT_ID, position);
-                        args.putString(ALERT_TIME, aAlert[0].trim());
-                        args.putString(ALERT_DURATION, aAlert[1].trim());
+                    if (aAlert.length == 4) {
+                        args.putInt(ALERT_ID, Integer.parseInt(aAlert[0].trim()));
+                        args.putString(ALERT_TIME, aAlert[1].trim());
+                        args.putString(ALERT_DURATION, aAlert[2].trim());
                         //Creates a ArrayList<Integer> from String "[1,2,3]"
-                        args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(aAlert[2].trim()));
+                        args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(aAlert[3].trim()));
 
                         oAddAlert = new AddAlertDialog();
                         oAddAlert.setArguments(args);
@@ -167,7 +159,35 @@ public class MainActivity extends AppCompatActivity
         for(String numberString : individualNumbers){
             integerArrayList.add(Integer.parseInt(numberString.trim()));
         }
+        Collections.sort(integerArrayList);
         return integerArrayList;
+    }
+
+    public void addAlerts() {
+
+        Log.d("Insert: ", "Inserting ..");
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        aAlerts.add(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
+        aAlerts.add(new Alert("12:00", "00:30", "[2,3]"));
+        aAlerts.add(new Alert("18:30", "00:10", "[4,5,6]"));
+
+        for (Alert cn : aAlerts) {
+            long id = mDB.addAlert(cn);
+            if (id >= 0) {
+                String log = "Id: " + cn.get_id() + " , Time: " + cn.get_time() + " , Duration: " + cn.get_duration();
+                // Writing Contacts to log
+                cn.set_id((int) id);
+                oAlertListAdapter.addAlert(cn.toString());
+                Log.d("Name: ", log);
+            }
+        }
+    }
+
+    public void removeAlerts() {
+        //This will erase the DB content
+        mDB.deleteAll();
+
+        oAlertListAdapter.removeAll();
     }
 
     /**
@@ -372,7 +392,11 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_addAlerts) {
+            addAlerts();
+            return true;
+        } else if (id == R.id.action_removeAlerts) {
+            removeAlerts();
             return true;
         }
 
@@ -442,6 +466,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     //Executed once the AddAlert is saved
+    /*
     @Override
     public void OnAlertSavedListener(int id, String alertTime) {
         if (id < 0) {
@@ -450,5 +475,16 @@ public class MainActivity extends AppCompatActivity
             oAlertListAdapter.updateAlert(id, alertTime);
         }
     }
+    */
+    @Override
+    public void OnAlertSavedListener(Alert oAlert) {
+        if (oAlert.get_id() < 0) {
+            oAlertListAdapter.addAlert(oAlert.toString());
+        } else {
+            oAlertListAdapter.updateAlert(oAlert.get_id(), oAlert.toString());
+        }
+    }
+
+
 
 }
