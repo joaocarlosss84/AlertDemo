@@ -43,26 +43,20 @@ public class AddAlertDialog extends DialogFragment {
     public static final String ALERT_TIME = "alertTime";
     public static final String ALERT_DURATION = "alertDuration";
     public static final String ALERT_WEEKDAYS = "alertWeekdays";
+    public static final String ALERT_POS = "alertPos";
 
     private TextView oTextViewTime;
     private TextView oTextViewDuration;
     //TreeSet will insert integers in order
     private TreeSet oSelectedWeekdays = new TreeSet<>();
     private String sTitle = "Add Alert";
-    public  Boolean bAdd = true;
 
     private int _id = -1;
+    private int _pos = -1;
 
     OnAlertSavedListener oAlertListener;
     private int iTimerPickerTheme = 0;
     //private int iTimerPickerTheme = android.R.style.Theme_Holo_Dialog; //Theme_Holo_Dialog_NoActionBar_MinWidth;
-
-    public void AddAlertDialog(String sTitle) {
-        this.sTitle = sTitle;
-    }
-
-    public void AddAlertDialog() {
-    }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState){
@@ -79,11 +73,14 @@ public class AddAlertDialog extends DialogFragment {
         oTextViewDuration = (TextView) oDialogView.findViewById(R.id.textViewDuration);
 
         if (args != null) {
+            _pos = args.getInt(ALERT_POS);
             _id = args.getInt(ALERT_ID);
             oTextViewTime.setText(args.getString(ALERT_TIME));
             oTextViewDuration.setText(args.getString(ALERT_DURATION));
             ArrayList<Integer> aWeekdays = args.getIntegerArrayList(ALERT_WEEKDAYS);
-            oSelectedWeekdays.addAll(aWeekdays);
+            if (aWeekdays != null) {
+                oSelectedWeekdays.addAll(aWeekdays);
+            }
         }
 
         //Configure Dialog with Save and Cancel buttons
@@ -101,7 +98,7 @@ public class AddAlertDialog extends DialogFragment {
                                 .setAction("Action", null).show();
 
                         // Send the event to the host activity
-                        oAlertListener.OnAlertSavedListener(_id,
+                        oAlertListener.OnAlertSaved(_id,
                                 oTextViewTime.getText() + " - "
                                 + oTextViewDuration.getText() + " - "
                                 + oSelectedWeekdays.toString());
@@ -199,22 +196,14 @@ public class AddAlertDialog extends DialogFragment {
                                     .setAction("Action", null).show();
                         } else {
                             // Send the event to the host activity
-                            //Collections.sort(oSelectedWeekdays);
                             Alert oAlert = new Alert();
                             oAlert.set_id(_id);
                             oAlert.set_time(oTextViewTime.getText().toString());
                             oAlert.set_duration(oTextViewDuration.getText().toString());
                             oAlert.set_weekdays(oSelectedWeekdays.toString());
 
-                            oAlertListener.OnAlertSavedListener(oAlert);
+                            oAlertListener.OnAlertSaved(_pos, oAlert);
 
-                            /*
-                            oAlertListener.OnAlertSavedListener(_id,
-                                    String.valueOf(_id) + " - " +
-                                    oTextViewTime.getText() + " - " +
-                                    oTextViewDuration.getText() + " - " +
-                                    oSelectedWeekdays.toString());
-                            */
                             //Dismiss once everything is OK.
                             getDialog().dismiss();
                         }
@@ -231,7 +220,7 @@ public class AddAlertDialog extends DialogFragment {
 
     private void setupWeekdays(View oDialogView) {
         LinearLayout oWeekdayGroup = (LinearLayout) oDialogView.findViewById(R.id.weekdayGroup);
-        View v = null;
+        View v;
         for(int i=0; i< oWeekdayGroup.getChildCount(); i++) {
             v = oWeekdayGroup.getChildAt(i);
             if (v instanceof CheckBox) {
@@ -291,7 +280,9 @@ public class AddAlertDialog extends DialogFragment {
             oTextViewDuration.setText(savedInstanceState.getCharSequence(ALERT_DURATION));
 
             ArrayList<Integer> aWeekdays = savedInstanceState.getIntegerArrayList(ALERT_WEEKDAYS);
-            oSelectedWeekdays.addAll(aWeekdays);
+            if (aWeekdays != null) {
+                oSelectedWeekdays.addAll(aWeekdays);
+            }
         }
     }
 
@@ -303,7 +294,7 @@ public class AddAlertDialog extends DialogFragment {
 
         //Convert HashSet to ArrayList and save it to State
         Integer[] aInt = (Integer[]) oSelectedWeekdays.toArray(new Integer[oSelectedWeekdays.size()]);
-        ArrayList<Integer> arr = new ArrayList<Integer>(Arrays.asList(aInt));
+        ArrayList<Integer> arr = new ArrayList<>(Arrays.asList(aInt));
         outState.putIntegerArrayList(ALERT_WEEKDAYS, arr);
 
         super.onSaveInstanceState(outState);
@@ -311,8 +302,9 @@ public class AddAlertDialog extends DialogFragment {
 
     // Container Activity must implement this interface
     public interface OnAlertSavedListener {
-        //public void OnAlertSavedListener(int id, String alertTime);
-        public void OnAlertSavedListener(Alert oAlert);
+        //public void OnAlertSaved(int pos, String alertTime);
+        void OnAlertSaved(int pos, Alert oAlert);
+        //public void OnAlertSaved(Alert oAlert);
     }
 
     //Attach the activy that call AddAlertDialog to callback
@@ -323,7 +315,7 @@ public class AddAlertDialog extends DialogFragment {
         try {
             oAlertListener = (OnAlertSavedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(context.toString() + " must implement OnAlertSavedListener");
+            throw new ClassCastException(context.toString() + " must implement OnAlertSaved");
         }
     }
 
@@ -332,7 +324,6 @@ public class AddAlertDialog extends DialogFragment {
                 @Override
                 public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
                     oTextViewTime.setText( String.format("%02d:%02d", hourOfDay, minute) );
-                    return;
                 }
             };
 
@@ -341,10 +332,8 @@ public class AddAlertDialog extends DialogFragment {
                 @Override
                 public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
                     oTextViewDuration.setText( String.format("%02d:%02d", hourOfDay, minute) );
-                    return;
                 }
             };
-
 
 }
 

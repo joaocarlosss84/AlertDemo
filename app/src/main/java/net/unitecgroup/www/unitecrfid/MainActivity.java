@@ -19,8 +19,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,12 +29,14 @@ import java.util.List;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
+import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_POS;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
-        AddAlertDialog.OnAlertSavedListener {
+        AddAlertDialog.OnAlertSavedListener,
+        AlertListAdapter.OnItemDeletedListener {
 
     private static final String ALERT_LIST = "alertList";
     private static final String ALERT_DELETE_LIST = "alertDeleteList";
@@ -77,39 +77,25 @@ public class MainActivity extends AppCompatActivity
 
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
-        oAlertListAdapter = new AlertListAdapter();
+        oAlertListAdapter = new AlertListAdapter(this);
 
         mDB = new DatabaseTable(this);
 
         //Create Fake Alerts just for demo
+        /*
         if (savedInstanceState == null) {
-            //oAlertListAdapter.addItems(5);
 
+        }
+        */
 
-            /**
-             * CRUD Operations
-             * */
-            // Inserting Contacts
-            //addAlerts();
+        // Reading all contacts
+        List<Alert> alerts = mDB.getAllAlerts();
 
-
-            // Reading all contacts
-            Log.d("Reading: ", "Reading all alerts..");
-            List<Alert> alerts = mDB.getAllAlerts();
-
-            for (Alert cn : alerts) {
-                String log = "Id: " + cn.get_id() + " , Time: " + cn.get_time() + " , Duration: " + cn.get_duration();
-                // Writing Contacts to log
-                oAlertListAdapter.addAlert(cn.toString());
-                Log.d("Name: ", log);
-            }
-
-
+        for (Alert cn : alerts) {
+            oAlertListAdapter.addAlert(cn);
         }
 
         setUpRecyclerView();
-
-
 
     }
 
@@ -128,8 +114,21 @@ public class MainActivity extends AppCompatActivity
                 public void onItemClick(View view, int position, String id) {
                     Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
 
+                    Alert oAlert = oAlertListAdapter.items.get(position);
+                    args.putInt(ALERT_POS, position);
+                    args.putInt(ALERT_ID, oAlert.get_id());
+                    args.putString(ALERT_TIME, oAlert.get_time());
+                    args.putString(ALERT_DURATION, oAlert.get_duration());
+                    //Creates a ArrayList<Integer> from String "[1,2,3]"
+                    args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(oAlert.get_weekdays()));
+
+                    oAddAlert = new AddAlertDialog();
+                    oAddAlert.setArguments(args);
+                    oAddAlert.show(fm, "Dialog Fragment");
+
+                    /*
                     //Split the Row String data to save into the Alert Dialog
-                    String sAlert = oAlertListAdapter.items.get(position);
+                    String sAlert = oAlertListAdapter.items.get(position).toString();
                     String[] aAlert = TextUtils.split(sAlert, "-");
 
                     if (aAlert.length == 4) {
@@ -143,6 +142,7 @@ public class MainActivity extends AppCompatActivity
                         oAddAlert.setArguments(args);
                         oAddAlert.show(fm, "Dialog Fragment");
                     }
+                    */
                 }
             }
         );
@@ -165,7 +165,6 @@ public class MainActivity extends AppCompatActivity
 
     public void addAlerts() {
 
-        Log.d("Insert: ", "Inserting ..");
         ArrayList<Alert> aAlerts = new ArrayList<>();
         aAlerts.add(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
         aAlerts.add(new Alert("12:00", "00:30", "[2,3]"));
@@ -174,11 +173,8 @@ public class MainActivity extends AppCompatActivity
         for (Alert cn : aAlerts) {
             long id = mDB.addAlert(cn);
             if (id >= 0) {
-                String log = "Id: " + cn.get_id() + " , Time: " + cn.get_time() + " , Duration: " + cn.get_duration();
-                // Writing Contacts to log
                 cn.set_id((int) id);
-                oAlertListAdapter.addAlert(cn.toString());
-                Log.d("Name: ", log);
+                oAlertListAdapter.addAlert(cn);
             }
         }
     }
@@ -405,9 +401,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
-        outState.putStringArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
-        //outState.pu
+        //outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
+        //outState.putStringArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
+        outState.putParcelableArrayList(ALERT_LIST, oAlertListAdapter.items);
+        outState.putIntegerArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
 
         super.onSaveInstanceState(outState);
     }
@@ -418,9 +415,15 @@ public class MainActivity extends AppCompatActivity
     // The savedInstanceState Bundle is same as the one used in onCreate().
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
-        oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
-        oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getStringArrayList(ALERT_DELETE_LIST);
+        //oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
+        //oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getStringArrayList(ALERT_DELETE_LIST);
+        oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
+        oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
@@ -447,44 +450,31 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_send) {
 
         }
-/*
-        if (fragment != null) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content_frame, fragment);
-            ft.commit();
-        }
-
-        // set the toolbar title
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(title);
-        }
-*/
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
-    //Executed once the AddAlert is saved
-    /*
     @Override
-    public void OnAlertSavedListener(int id, String alertTime) {
-        if (id < 0) {
-            oAlertListAdapter.addAlert(alertTime);
-        } else {
-            oAlertListAdapter.updateAlert(id, alertTime);
-        }
-    }
-    */
-    @Override
-    public void OnAlertSavedListener(Alert oAlert) {
+    public void OnAlertSaved(int pos, Alert oAlert) {
         if (oAlert.get_id() < 0) {
-            oAlertListAdapter.addAlert(oAlert.toString());
+            //Adding new alert to DB
+            long id = mDB.addAlert(oAlert);
+            oAlert.set_id((int) id);
+            if (id >= 0) {
+                oAlertListAdapter.addAlert(oAlert);
+            }
         } else {
-            oAlertListAdapter.updateAlert(oAlert.get_id(), oAlert.toString());
+            //update row at DB
+            if (mDB.updateAlert(oAlert)) {
+                oAlertListAdapter.updateAlert(pos, oAlert);
+            }
         }
     }
 
-
-
+    @Override
+    public boolean OnItemDeleted(int pos, Alert oAlert) {
+        return mDB.deleteAlert(oAlert);
+    }
 }
