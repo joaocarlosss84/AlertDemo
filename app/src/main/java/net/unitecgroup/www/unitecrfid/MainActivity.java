@@ -105,6 +105,8 @@ public class MainActivity extends AppCompatActivity
         //mRecyclerView.setLayoutManager(new GridLayoutManager(this,2));
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(oAlertListAdapter);
+        //mRecyclerView.swapAdapter(oAlertListAdapter, false);
+
         mRecyclerView.setHasFixedSize(true);
 
         //Create the Alert Edit Dialog, load the previous data.
@@ -171,9 +173,7 @@ public class MainActivity extends AppCompatActivity
         aAlerts.add(new Alert("18:30", "00:10", "[4,5,6]"));
 
         for (Alert cn : aAlerts) {
-            long id = mDB.addAlert(cn);
-            if (id >= 0) {
-                cn.set_id((int) id);
+            if (mDB.addAlert(cn) >= 0) {
                 oAlertListAdapter.addAlert(cn);
             }
         }
@@ -283,6 +283,9 @@ public class MainActivity extends AppCompatActivity
      * after an item is removed.
      */
     private void setUpAnimationDecoratorHelper() {
+
+
+
         mRecyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
 
             // we want to cache this and not allocate anything repeatedly in the onDraw method
@@ -362,7 +365,6 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -394,6 +396,9 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.action_removeAlerts) {
             removeAlerts();
             return true;
+        } else if (id == R.id.action_updateAlerts) {
+            oAlertListAdapter.notifyDataSetChanged();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -403,6 +408,7 @@ public class MainActivity extends AppCompatActivity
     protected void onSaveInstanceState(Bundle outState) {
         //outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
         //outState.putStringArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
+        //outState.putSerializable(ALERT_LIST, oAlertListAdapter.items);
         outState.putParcelableArrayList(ALERT_LIST, oAlertListAdapter.items);
         outState.putIntegerArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
 
@@ -417,6 +423,7 @@ public class MainActivity extends AppCompatActivity
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         //oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
         //oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getStringArrayList(ALERT_DELETE_LIST);
+        //oAlertListAdapter.items = (ArrayList<Alert>) savedInstanceState.getSerializable(ALERT_LIST);
         oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
         oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
     }
@@ -460,9 +467,7 @@ public class MainActivity extends AppCompatActivity
     public void OnAlertSaved(int pos, Alert oAlert) {
         if (oAlert.get_id() < 0) {
             //Adding new alert to DB
-            long id = mDB.addAlert(oAlert);
-            oAlert.set_id((int) id);
-            if (id >= 0) {
+            if (mDB.addAlert(oAlert) >= 0) {
                 oAlertListAdapter.addAlert(oAlert);
             }
         } else {

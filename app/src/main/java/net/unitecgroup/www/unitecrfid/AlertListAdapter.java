@@ -3,6 +3,7 @@ package net.unitecgroup.www.unitecrfid;
 import android.graphics.Color;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,7 +39,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
     }
 
     public void addAlert(Alert oAlert) {
-
         try {
             items.add(oAlert);
             notifyItemInserted(items.size() - 1);
@@ -49,7 +49,38 @@ class AlertListAdapter extends RecyclerView.Adapter {
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        Log.w("AlertListAdapter", "onCreateViewHolder");
         return new AlertListHolder(parent);
+    }
+
+    @Override
+    public void onViewRecycled(RecyclerView.ViewHolder holder) {
+        super.onViewRecycled(holder);
+        Log.w("AlertListAdapter", "onViewRecycled");
+    }
+
+    @Override
+    public void onViewDetachedFromWindow(RecyclerView.ViewHolder holder) {
+        super.onViewDetachedFromWindow(holder);
+        Log.w("AlertListAdapter", "onViewDetachedFromWindow");
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        Log.w("AlertListAdapter", "onDetachedFromRecyclerView");
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        Log.w("AlertListAdapter", "onAttachedToRecyclerView");
+    }
+
+    @Override
+    public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        Log.w("AlertListAdapter", "onViewAttachedToWindow");
     }
 
     @Override
@@ -58,6 +89,8 @@ class AlertListAdapter extends RecyclerView.Adapter {
         final int iPos = position;
 
         final String item = items.get(position).toString();
+
+        Log.w("AlertListAdapter", "onBindViewHolder");
 
         if (itemsPendingRemoval.contains(position)) {
             // we need to show the "undo" state of the row
@@ -128,8 +161,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
             Runnable pendingRemovalRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    //int pos = items.indexOf(item);
-                    //remove(pos);
                     remove(iPos);
                 }
             };

@@ -9,4 +9,5 @@
     <string name="search_title">Search</string>
     <string name="action_addAlerts">Add Alerts</string>
     <string name="action_removeAlerts">Remove Alerts</string>
+    <string name="action_updateAlerts">Update Alerts</string>
 </resources>

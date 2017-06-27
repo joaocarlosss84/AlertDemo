@@ -32,25 +32,6 @@ public class Alert implements Parcelable {
         this._weekdays = weekdays;
     }
 
-    protected Alert(Parcel in) {
-        _id = in.readInt();
-        _time = in.readString();
-        _duration = in.readString();
-        _weekdays = in.readString();
-    }
-
-    public static final Creator<Alert> CREATOR = new Creator<Alert>() {
-        @Override
-        public Alert createFromParcel(Parcel in) {
-            return new Alert(in);
-        }
-
-        @Override
-        public Alert[] newArray(int size) {
-            return new Alert[size];
-        }
-    };
-
     public int get_id() {
         return _id;
     }
@@ -88,6 +69,7 @@ public class Alert implements Parcelable {
         return this._id + " - " + this._time + " - " + this._duration + " - " + this._weekdays;
     }
 
+
     @Override
     public int describeContents() {
         return 0;
@@ -100,6 +82,26 @@ public class Alert implements Parcelable {
         dest.writeString(_duration);
         dest.writeString(_weekdays);
     }
+
+    protected Alert(Parcel in) {
+        _id = in.readInt();
+        _time = in.readString();
+        _duration = in.readString();
+        _weekdays = in.readString();
+    }
+
+    public static final Creator<Alert> CREATOR = new Creator<Alert>() {
+        @Override
+        public Alert createFromParcel(Parcel in) {
+            return new Alert(in);
+        }
+
+        @Override
+        public Alert[] newArray(int size) {
+            return new Alert[size];
+        }
+    };
+
 
 
 }
