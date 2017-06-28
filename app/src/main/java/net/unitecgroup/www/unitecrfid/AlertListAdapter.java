@@ -15,6 +15,8 @@ import java.util.HashMap;
 
 /**
  * Created by 20006030 on 05/06/2017.
+ *
+ *
  */
 
 class AlertListAdapter extends RecyclerView.Adapter {
@@ -36,7 +38,16 @@ class AlertListAdapter extends RecyclerView.Adapter {
         this.mItemDeletedListener = callback;
         items = new ArrayList<>();
         itemsPendingRemoval = new ArrayList<>();
+        setHasStableIds(true);
     }
+
+    public AlertListAdapter(OnItemDeletedListener callback, ArrayList<Alert> alerts) {
+        this.mItemDeletedListener = callback;
+        items = alerts;
+        itemsPendingRemoval = new ArrayList<>();
+        setHasStableIds(true);
+    }
+
 
     public void addAlert(Alert oAlert) {
         try {
@@ -48,15 +59,33 @@ class AlertListAdapter extends RecyclerView.Adapter {
     }
 
     @Override
+    public long getItemId(int position) {
+        Alert oAlert = items.get(position);
+        return oAlert.get_id();
+        //return super.getItemId(position);
+    }
+
+    public int getPositionForId(long id) {
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i).get_id() == id) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        Log.w("AlertListAdapter", "onCreateViewHolder");
+        //Log.w("AlertListAdapter", "onCreateViewHolder");
         return new AlertListHolder(parent);
     }
+
+
 
     @Override
     public void onViewRecycled(RecyclerView.ViewHolder holder) {
         super.onViewRecycled(holder);
-        Log.w("AlertListAdapter", "onViewRecycled");
+        //Log.w("AlertListAdapter", "onViewRecycled");
     }
 
     @Override
@@ -74,25 +103,24 @@ class AlertListAdapter extends RecyclerView.Adapter {
     @Override
     public void onAttachedToRecyclerView(RecyclerView recyclerView) {
         super.onAttachedToRecyclerView(recyclerView);
-        Log.w("AlertListAdapter", "onAttachedToRecyclerView");
+        //Log.w("AlertListAdapter", "onAttachedToRecyclerView");
     }
 
     @Override
     public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {
         super.onViewAttachedToWindow(holder);
-        Log.w("AlertListAdapter", "onViewAttachedToWindow");
+        //Log.w("AlertListAdapter", "onViewAttachedToWindow");
     }
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         AlertListHolder viewHolder = (AlertListHolder)holder;
         final int iPos = position;
-
-        final String item = items.get(position).toString();
+        final Alert oAlert = items.get(position);
 
         Log.w("AlertListAdapter", "onBindViewHolder");
 
-        if (itemsPendingRemoval.contains(position)) {
+        if (itemsPendingRemoval.contains(oAlert.get_id())) {
             // we need to show the "undo" state of the row
             viewHolder.itemView.setBackgroundColor(Color.RED);
             viewHolder.titleTextView.setVisibility(View.GONE);
@@ -100,13 +128,17 @@ class AlertListAdapter extends RecyclerView.Adapter {
             viewHolder.undoButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    int id = oAlert.get_id();
+                    int iPos = getPositionForId(id);
+
                     // user wants to undo the removal, let's cancel the pending task
-                    Runnable pendingRemovalRunnable = pendingRunnables.get(iPos);
-                    pendingRunnables.remove(iPos);
+                    Runnable pendingRemovalRunnable = pendingRunnables.get(id);
+                    pendingRunnables.remove(id);
+
                     if (pendingRemovalRunnable != null) handler.removeCallbacks(pendingRemovalRunnable);
-                    itemsPendingRemoval.remove(iPos);
+                    itemsPendingRemoval.remove(itemsPendingRemoval.indexOf(id));
+
                     // this will rebind the row in "normal" state
-                    //notifyItemChanged(items.indexOf(item));
                     notifyItemChanged(iPos);
                 }
             });
@@ -114,7 +146,7 @@ class AlertListAdapter extends RecyclerView.Adapter {
             // we need to show the "normal" state
             viewHolder.itemView.setBackgroundColor(Color.WHITE);
             viewHolder.titleTextView.setVisibility(View.VISIBLE);
-            viewHolder.titleTextView.setText(item);
+            viewHolder.titleTextView.setText(oAlert.toString());
             viewHolder.undoButton.setVisibility(View.GONE);
             viewHolder.undoButton.setOnClickListener(null);
         }
@@ -151,21 +183,43 @@ class AlertListAdapter extends RecyclerView.Adapter {
 
     public void pendingRemoval(int position) {
         Alert oAlert = items.get(position);
-        final String item = oAlert.toString();
         final int iPos = position;
-        if (!itemsPendingRemoval.contains(position)) {
-            itemsPendingRemoval.add(position);
+        final int id = oAlert.get_id();
+
+        if (!itemsPendingRemoval.contains(id)) {
+            itemsPendingRemoval.add(id);
             // this will redraw row in "undo" state
             notifyItemChanged(position);
             // let's create, store and post a runnable to remove the item
             Runnable pendingRemovalRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    remove(iPos);
+                    removeById(id);
+                    //remove(id);
                 }
             };
             handler.postDelayed(pendingRemovalRunnable, PENDING_REMOVAL_TIMEOUT);
-            pendingRunnables.put(position, pendingRemovalRunnable);
+            pendingRunnables.put(id, pendingRemovalRunnable);
+        }
+    }
+
+    public void refreshPendingRemoval(int alert_id) {
+        final int id = alert_id;
+
+        if (itemsPendingRemoval.contains(id)) {
+            // this will redraw row in "undo" state
+            int position = getPositionForId(id);
+            notifyItemChanged(position);
+            // let's create, store and post a runnable to remove the item
+            Runnable pendingRemovalRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    //remove(iPos);
+                    notifyDataSetChanged();
+                }
+            };
+            handler.postDelayed(pendingRemovalRunnable, PENDING_REMOVAL_TIMEOUT);
+            pendingRunnables.put(id, pendingRemovalRunnable);
         }
     }
 
@@ -177,6 +231,25 @@ class AlertListAdapter extends RecyclerView.Adapter {
         if (bSuccess) {
             if (itemsPendingRemoval.contains(position)) {
                 itemsPendingRemoval.remove(itemsPendingRemoval.indexOf(position));
+            }
+
+            if (items.get(position) != null) {
+                items.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, items.size());
+            }
+        }
+    }
+
+    public void removeById(int id) {
+        //String item = items.get(position);
+        int position = getPositionForId(id);
+
+        boolean bSuccess = mItemDeletedListener.OnItemDeleted(position, items.get(position));
+
+        if (bSuccess) {
+            if (itemsPendingRemoval.contains(id)) {
+                itemsPendingRemoval.remove(itemsPendingRemoval.indexOf(id));
             }
 
             if (items.get(position) != null) {

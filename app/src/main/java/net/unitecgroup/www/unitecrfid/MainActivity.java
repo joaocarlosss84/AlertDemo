@@ -19,13 +19,13 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
@@ -77,26 +77,48 @@ public class MainActivity extends AppCompatActivity
 
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
-        oAlertListAdapter = new AlertListAdapter(this);
-
         mDB = new DatabaseTable(this);
 
-        //Create Fake Alerts just for demo
-        /*
-        if (savedInstanceState == null) {
-
-        }
-        */
-
         // Reading all contacts
-        List<Alert> alerts = mDB.getAllAlerts();
+        ArrayList<Alert> alerts = mDB.getAllAlerts();
 
+        oAlertListAdapter = new AlertListAdapter(this, alerts);
+        /*
         for (Alert cn : alerts) {
             oAlertListAdapter.addAlert(cn);
         }
+        */
 
         setUpRecyclerView();
 
+        if (savedInstanceState != null) {
+            //Treating Screen Rotation
+        }
+
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        Log.w("MainActivity", "onPostResume");
+
+        if (oAlertListAdapter.isUndoOn()) {
+            for (int i=0; i< oAlertListAdapter.itemsPendingRemoval.size(); i++) {
+                int id = oAlertListAdapter.itemsPendingRemoval.get(i);
+                oAlertListAdapter.refreshPendingRemoval(id);
+            }
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mDB.close();
     }
 
     private void setUpRecyclerView() {
@@ -426,11 +448,7 @@ public class MainActivity extends AppCompatActivity
         //oAlertListAdapter.items = (ArrayList<Alert>) savedInstanceState.getSerializable(ALERT_LIST);
         oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
         oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
+        Log.w("MainActivity", "onRestoreInstanceState");
     }
 
     @SuppressWarnings("StatementWithEmptyBody")

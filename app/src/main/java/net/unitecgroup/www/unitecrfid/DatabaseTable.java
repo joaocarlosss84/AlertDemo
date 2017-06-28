@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.List;
 
 import static android.content.ContentValues.TAG;
 
@@ -214,8 +213,8 @@ public class DatabaseTable extends SQLiteOpenHelper {
     }
 
     // Getting All alert
-    public List<Alert> getAllAlerts() {
-        List<Alert> alertList = new ArrayList<Alert>();
+    public ArrayList<Alert> getAllAlerts() {
+        ArrayList<Alert> alertList = new ArrayList<Alert>();
         // Select All Query
         String selectQuery = "SELECT  * FROM " + AlertEntry.TABLE_NAME;
 
