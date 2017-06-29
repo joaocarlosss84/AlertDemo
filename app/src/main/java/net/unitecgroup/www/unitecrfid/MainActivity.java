@@ -491,7 +491,7 @@ public class MainActivity extends AppCompatActivity
         } else {
             //update row at DB
             if (mDB.updateAlert(oAlert)) {
-                oAlertListAdapter.updateAlert(pos, oAlert);
+                oAlertListAdapter.updateAlert(oAlert);
             }
         }
     }

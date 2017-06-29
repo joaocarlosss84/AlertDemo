@@ -167,10 +167,11 @@ class AlertListAdapter extends RecyclerView.Adapter {
 
     }
 
-    public void updateAlert(Integer pos, Alert oAlert) {
+    public void updateAlert(Alert oAlert) {
         //test if position exists
-        items.set(pos, oAlert);
-        notifyItemChanged(pos);
+        int iPos = getPositionForId(oAlert.get_id());
+        items.set(iPos, oAlert);
+        notifyItemChanged(iPos);
     }
 
     public void setUndoOn(boolean undoOn) {
@@ -291,7 +292,8 @@ class AlertListAdapter extends RecyclerView.Adapter {
             titleTextView = (TextView) itemView.findViewById(R.id.title_text_view);
             undoButton = (Button) itemView.findViewById(R.id.undo_button);
 
-            itemView.setOnClickListener(this);
+            titleTextView.setOnClickListener(this);
+            //itemView.setOnClickListener(this);
         }
 
         /*
