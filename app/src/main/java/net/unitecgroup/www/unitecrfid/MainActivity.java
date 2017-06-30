@@ -33,6 +33,11 @@ import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_POS;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
 
+/**
+ *
+ * http://nemanjakovacevic.net/blog/english/2016/01/12/recyclerview-swipe-to-delete-no-3rd-party-lib-necessary/
+ * https://github.com/ashrithks/SwipeRecyclerView
+ */
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         AddAlertDialog.OnAlertSavedListener,
@@ -40,7 +45,7 @@ public class MainActivity extends AppCompatActivity
 
     private static final String ALERT_LIST = "alertList";
     private static final String ALERT_DELETE_LIST = "alertDeleteList";
-    AlertListAdapter oAlertListAdapter;
+    static AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
 
     FragmentManager fm = getSupportFragmentManager();
@@ -82,7 +87,9 @@ public class MainActivity extends AppCompatActivity
         // Reading all contacts
         ArrayList<Alert> alerts = mDB.getAllAlerts();
 
-        oAlertListAdapter = new AlertListAdapter(this, alerts);
+        if (oAlertListAdapter == null)
+            oAlertListAdapter = new AlertListAdapter(this, alerts);
+
         /*
         for (Alert cn : alerts) {
             oAlertListAdapter.addAlert(cn);
@@ -95,24 +102,6 @@ public class MainActivity extends AppCompatActivity
             //Treating Screen Rotation
         }
 
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    protected void onPostResume() {
-        super.onPostResume();
-        Log.w("MainActivity", "onPostResume");
-
-        if (oAlertListAdapter.isUndoOn()) {
-            for (int i=0; i< oAlertListAdapter.itemsPendingRemoval.size(); i++) {
-                int id = oAlertListAdapter.itemsPendingRemoval.get(i);
-                oAlertListAdapter.refreshPendingRemoval(id);
-            }
-        }
     }
 
     @Override
@@ -235,25 +224,33 @@ public class MainActivity extends AppCompatActivity
             // not important, we don't want drag & drop
             @Override
             public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                Log.w("MainActivity", "simpleItemTouchCallback:onMove()");
                 return false;
             }
 
-
+            /*
             @Override
             public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
                 int position = viewHolder.getAdapterPosition();
                 AlertListAdapter testAdapter = (AlertListAdapter)recyclerView.getAdapter();
+
+                Log.w("MainActivity", "simpleItemTouchCallback:getSwipeDirs "+position);
+
                 if (testAdapter.isUndoOn() && testAdapter.isPendingRemoval(position)) {
                     return 0;
                 }
                 return super.getSwipeDirs(recyclerView, viewHolder);
             }
+            */
 
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int swipeDir) {
                 int swipedPosition = viewHolder.getAdapterPosition();
                 AlertListAdapter adapter = (AlertListAdapter)mRecyclerView.getAdapter();
                 boolean undoOn = adapter.isUndoOn();
+                Log.w("MainActivity", "simpleItemTouchCallback:onSwiped "+swipedPosition);
+
+
                 if (undoOn) {
                     adapter.pendingRemoval(swipedPosition);
                 } else {
@@ -264,6 +261,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
                 View itemView = viewHolder.itemView;
+                AlertListAdapter adapter = (AlertListAdapter)mRecyclerView.getAdapter();
+                boolean undoOn = adapter.isUndoOn();
 
                 // not sure why, but this method get's called for viewholder that are already swiped away
                 if (viewHolder.getAdapterPosition() == -1) {
@@ -279,18 +278,20 @@ public class MainActivity extends AppCompatActivity
                 background.setBounds(itemView.getRight() + (int) dX, itemView.getTop(), itemView.getRight(), itemView.getBottom());
                 background.draw(c);
 
-                // draw x mark
-                int itemHeight = itemView.getBottom() - itemView.getTop();
-                int intrinsicWidth = xMark.getIntrinsicWidth();
-                int intrinsicHeight = xMark.getIntrinsicWidth();
+                if (!undoOn) {
+                    // draw x mark
+                    int itemHeight = itemView.getBottom() - itemView.getTop();
+                    int intrinsicWidth = xMark.getIntrinsicWidth();
+                    int intrinsicHeight = xMark.getIntrinsicWidth();
 
-                int xMarkLeft = itemView.getRight() - xMarkMargin - intrinsicWidth;
-                int xMarkRight = itemView.getRight() - xMarkMargin;
-                int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-                int xMarkBottom = xMarkTop + intrinsicHeight;
-                xMark.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
+                    int xMarkLeft = itemView.getRight() - xMarkMargin - intrinsicWidth;
+                    int xMarkRight = itemView.getRight() - xMarkMargin;
+                    int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
+                    int xMarkBottom = xMarkTop + intrinsicHeight;
+                    xMark.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
 
-                xMark.draw(c);
+                    xMark.draw(c);
+                }
 
                 super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
             }
