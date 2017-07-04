@@ -1,6 +1,5 @@
 package net.unitecgroup.www.unitecrfid;
 
-import android.app.Fragment;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -8,18 +7,13 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.NavigationView;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -38,8 +32,7 @@ import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
  * http://nemanjakovacevic.net/blog/english/2016/01/12/recyclerview-swipe-to-delete-no-3rd-party-lib-necessary/
  * https://github.com/ashrithks/SwipeRecyclerView
  */
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,
+public class MainActivity extends BaseActivity implements
         AddAlertDialog.OnAlertSavedListener,
         AlertListAdapter.OnItemDeletedListener {
 
@@ -53,13 +46,12 @@ public class MainActivity extends AppCompatActivity
 
     DatabaseTable mDB;
 
+    ServerCommunication mServer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         //Floating Action Button
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -71,6 +63,11 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+        /*
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
@@ -79,10 +76,12 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-
+        */
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
         mDB = new DatabaseTable(this);
+
+        mServer = new ServerCommunication(this);
 
         // Reading all contacts
         ArrayList<Alert> alerts = mDB.getAllAlerts();
@@ -224,18 +223,15 @@ public class MainActivity extends AppCompatActivity
             // not important, we don't want drag & drop
             @Override
             public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-                Log.w("MainActivity", "simpleItemTouchCallback:onMove()");
                 return false;
             }
 
             /*
+            //This is creating problems trying to delete two consecutive rows.
             @Override
             public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
                 int position = viewHolder.getAdapterPosition();
                 AlertListAdapter testAdapter = (AlertListAdapter)recyclerView.getAdapter();
-
-                Log.w("MainActivity", "simpleItemTouchCallback:getSwipeDirs "+position);
-
                 if (testAdapter.isUndoOn() && testAdapter.isPendingRemoval(position)) {
                     return 0;
                 }
@@ -248,9 +244,6 @@ public class MainActivity extends AppCompatActivity
                 int swipedPosition = viewHolder.getAdapterPosition();
                 AlertListAdapter adapter = (AlertListAdapter)mRecyclerView.getAdapter();
                 boolean undoOn = adapter.isUndoOn();
-                Log.w("MainActivity", "simpleItemTouchCallback:onSwiped "+swipedPosition);
-
-
                 if (undoOn) {
                     adapter.pendingRemoval(swipedPosition);
                 } else {
@@ -399,6 +392,11 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected int getNavigationDrawerID() {
+        return R.id.nav_home;
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
@@ -429,9 +427,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        //outState.putStringArrayList(ALERT_LIST, oAlertListAdapter.items);
-        //outState.putStringArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
-        //outState.putSerializable(ALERT_LIST, oAlertListAdapter.items);
         outState.putParcelableArrayList(ALERT_LIST, oAlertListAdapter.items);
         outState.putIntegerArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
 
@@ -444,14 +439,11 @@ public class MainActivity extends AppCompatActivity
     // The savedInstanceState Bundle is same as the one used in onCreate().
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
-        //oAlertListAdapter.items = savedInstanceState.getStringArrayList(ALERT_LIST);
-        //oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getStringArrayList(ALERT_DELETE_LIST);
-        //oAlertListAdapter.items = (ArrayList<Alert>) savedInstanceState.getSerializable(ALERT_LIST);
         oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
         oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
-        Log.w("MainActivity", "onRestoreInstanceState");
     }
 
+    /*
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -477,10 +469,18 @@ public class MainActivity extends AppCompatActivity
 
         }
 
+        if (fragment != null) {
+            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            ft.replace(R.id.content_frame, fragment);
+            ft.commit();
+        }
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+    */
+
 
     @Override
     public void OnAlertSaved(int pos, Alert oAlert) {

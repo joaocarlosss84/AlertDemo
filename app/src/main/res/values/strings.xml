@@ -10,4 +10,7 @@
     <string name="action_addAlerts">Add Alerts</string>
     <string name="action_removeAlerts">Remove Alerts</string>
     <string name="action_updateAlerts">Update Alerts</string>
+    <string name="msg_failed">Error to connect to server</string>
+    <string name="pref_example_switch">Example Switch</string>
+    <string name="pref_example_switch_summary">Example Switch Summary</string>
 </resources>
