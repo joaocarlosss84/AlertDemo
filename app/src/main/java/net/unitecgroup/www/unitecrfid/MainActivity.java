@@ -1,5 +1,8 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.app.SearchManager;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -13,6 +16,7 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -63,20 +67,13 @@ public class MainActivity extends BaseActivity implements
             }
         });
 
-        /*
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-        */
+        //Receiving query from SEARCH
+        // Get the intent, verify the action and get the query
+        Intent intent = getIntent();
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            String query = intent.getStringExtra(SearchManager.QUERY);
+            //doMySearch(query);
+        }
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
         mDB = new DatabaseTable(this);
@@ -86,20 +83,11 @@ public class MainActivity extends BaseActivity implements
         // Reading all contacts
         ArrayList<Alert> alerts = mDB.getAllAlerts();
 
+        //Do not create more than one Adapter to avoid problems with screen rotation
         if (oAlertListAdapter == null)
             oAlertListAdapter = new AlertListAdapter(this, alerts);
 
-        /*
-        for (Alert cn : alerts) {
-            oAlertListAdapter.addAlert(cn);
-        }
-        */
-
         setUpRecyclerView();
-
-        if (savedInstanceState != null) {
-            //Treating Screen Rotation
-        }
 
     }
 
@@ -115,8 +103,6 @@ public class MainActivity extends BaseActivity implements
         //mRecyclerView.setLayoutManager(new GridLayoutManager(this,2));
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(oAlertListAdapter);
-        //mRecyclerView.swapAdapter(oAlertListAdapter, false);
-
         mRecyclerView.setHasFixedSize(true);
 
         //Create the Alert Edit Dialog, load the previous data.
@@ -126,35 +112,19 @@ public class MainActivity extends BaseActivity implements
                 public void onItemClick(View view, int position, String id) {
                     Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
 
+                    //Save alert data to pass it to Dialog
                     Alert oAlert = oAlertListAdapter.items.get(position);
                     args.putInt(ALERT_POS, position);
                     args.putInt(ALERT_ID, oAlert.get_id());
                     args.putString(ALERT_TIME, oAlert.get_time());
                     args.putString(ALERT_DURATION, oAlert.get_duration());
-                    //Creates a ArrayList<Integer> from String "[1,2,3]"
+
                     args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(oAlert.get_weekdays()));
 
                     oAddAlert = new AddAlertDialog();
                     oAddAlert.setArguments(args);
                     oAddAlert.show(fm, "Dialog Fragment");
 
-                    /*
-                    //Split the Row String data to save into the Alert Dialog
-                    String sAlert = oAlertListAdapter.items.get(position).toString();
-                    String[] aAlert = TextUtils.split(sAlert, "-");
-
-                    if (aAlert.length == 4) {
-                        args.putInt(ALERT_ID, Integer.parseInt(aAlert[0].trim()));
-                        args.putString(ALERT_TIME, aAlert[1].trim());
-                        args.putString(ALERT_DURATION, aAlert[2].trim());
-                        //Creates a ArrayList<Integer> from String "[1,2,3]"
-                        args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(aAlert[3].trim()));
-
-                        oAddAlert = new AddAlertDialog();
-                        oAddAlert.setArguments(args);
-                        oAddAlert.show(fm, "Dialog Fragment");
-                    }
-                    */
                 }
             }
         );
@@ -163,7 +133,7 @@ public class MainActivity extends BaseActivity implements
         setUpAnimationDecoratorHelper();
     }
 
-
+    //Creates a ArrayList<Integer> from String "[1,2,3]"
     public static ArrayList<Integer> arrayStringToIntegerArrayList(String arrayString){
         String removedBrackets = arrayString.substring(1, arrayString.length() - 1);
         String[] individualNumbers = removedBrackets.split(",");
@@ -176,7 +146,6 @@ public class MainActivity extends BaseActivity implements
     }
 
     public void addAlerts() {
-
         ArrayList<Alert> aAlerts = new ArrayList<>();
         aAlerts.add(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
         aAlerts.add(new Alert("12:00", "00:30", "[2,3]"));
@@ -391,15 +360,36 @@ public class MainActivity extends BaseActivity implements
         }
     }
 
+    //Used to handle the Application Navigation
     @Override
     protected int getNavigationDrawerID() {
         return R.id.nav_home;
     }
 
+    //
+
+    /**
+     * Creates Activity menu
+     *
+     * https://developer.android.com/training/appbar/action-views.html
+     * https://developer.android.com/guide/topics/search/search-dialog.html#SearchableConfiguration
+     * @param menu
+     * @return
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+
+        // Get the SearchView and set the searchable configuration
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+        if (searchView != null) {
+            //TODO: NOT WORKING
+            // Assumes current activity is the searchable activity
+            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+            searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
+        }
         return true;
     }
 
@@ -442,45 +432,6 @@ public class MainActivity extends BaseActivity implements
         oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
         oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
     }
-
-    /*
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        Fragment fragment = null;
-        String title = getString(R.string.app_name);
-
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-            //fragment = new NFCActivity();
-            //title  = "NFC";
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
-        }
-
-        if (fragment != null) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.content_frame, fragment);
-            ft.commit();
-        }
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-    */
-
 
     @Override
     public void OnAlertSaved(int pos, Alert oAlert) {

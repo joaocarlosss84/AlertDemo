@@ -2,6 +2,7 @@ package net.unitecgroup.www.unitecrfid;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 import com.android.volley.VolleyError;
 import com.google.gson.Gson;
@@ -30,9 +31,8 @@ public class ServerCommunication {
     public ServerCommunication(Context context) {
         this.context = context;
         gson = new Gson();
-        SharedPreferences pref = context.getApplicationContext().getSharedPreferences("MyPref", Context.MODE_PRIVATE);
-        serverPath = pref.getString("server_path", "http://192.168.1.1");
-        //serverPath = context.getSharedPreferences("server_path","http://192.168.1.202");
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        serverPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
         requestPath = serverPath + "/req";
     }
 
@@ -40,15 +40,6 @@ public class ServerCommunication {
 
     //region Metodos Publicos
     public static String getServerPath() {return serverPath;}
-
-    public void setServerPath(String path) {
-        SharedPreferences.Editor editor = this.context.getSharedPreferences("MyPref", Context.MODE_PRIVATE).edit();
-        editor.putString("server_path", path);
-        editor.commit();
-        //editor.apply();
-        serverPath = path;
-        requestPath = serverPath + "/req";
-    }
 
     //endregion
 

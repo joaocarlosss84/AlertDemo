@@ -13,4 +13,8 @@
     <string name="msg_failed">Error to connect to server</string>
     <string name="pref_example_switch">Example Switch</string>
     <string name="pref_example_switch_summary">Example Switch Summary</string>
+    <string name="pref_server_ip">Server IP</string>
+    <string name="pref_server_ip_default">192.168.1.1</string>
+    <string name="app_label">Search</string>
+    <string name="search_hint">Search Hing</string>
 </resources>

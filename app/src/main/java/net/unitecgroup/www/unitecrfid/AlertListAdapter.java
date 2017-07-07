@@ -3,6 +3,7 @@ package net.unitecgroup.www.unitecrfid;
 import android.graphics.Color;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,7 +11,6 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * Created by 20006030 on 05/06/2017.
@@ -19,14 +19,15 @@ import java.util.HashMap;
  */
 
 class AlertListAdapter extends RecyclerView.Adapter {
-    private static final int PENDING_REMOVAL_TIMEOUT = 2000; // 3sec
+    private static final int PENDING_REMOVAL_TIMEOUT = 3000; // 3sec
 
     ArrayList<Alert> items;
     ArrayList<Integer> itemsPendingRemoval;
     private boolean undoOn = false; // is undo on, you can turn it on from the toolbar menu
 
     private Handler handler = new Handler(); // hanlder for running delayed runnables
-    private HashMap<Integer, Runnable> pendingRunnables = new HashMap<>(); // map of items to pending runnables, so we can cancel a removal if need be
+    // map of items to pending runnables, so we can cancel a removal if need be
+    private SparseArray<Runnable> pendingRunnables = new SparseArray<>();
 
     //OnItemLongClickListener mItemClickListener;
     private OnItemClickListener mItemClickListener;
@@ -64,7 +65,7 @@ class AlertListAdapter extends RecyclerView.Adapter {
         //return super.getItemId(position);
     }
 
-    public int getPositionForId(long id) {
+    private int getPositionForId(long id) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).get_id() == id) {
                 return i;
@@ -128,6 +129,10 @@ class AlertListAdapter extends RecyclerView.Adapter {
     }
 
     public void removeAll() {
+        //must clear all running threads to avoid future problems
+        handler.removeCallbacksAndMessages(null);
+        pendingRunnables.clear();
+
         itemsPendingRemoval.clear();
 
         int iMax = items.size();
@@ -154,7 +159,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
 
     public void pendingRemoval(int position) {
         Alert oAlert = items.get(position);
-        final int iPos = position;
         final int id = oAlert.get_id();
 
         if (!itemsPendingRemoval.contains(id)) {
@@ -166,7 +170,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
                 @Override
                 public void run() {
                     removeById(id);
-                    //remove(id);
                 }
             };
             handler.postDelayed(pendingRemovalRunnable, PENDING_REMOVAL_TIMEOUT);
@@ -175,7 +178,6 @@ class AlertListAdapter extends RecyclerView.Adapter {
     }
 
     public void remove(int position) {
-        //String item = items.get(position);
 
         boolean bSuccess = false;
         try {
@@ -197,7 +199,7 @@ class AlertListAdapter extends RecyclerView.Adapter {
         }
     }
 
-    public void removeById(int id) {
+    private void removeById(int id) {
         //String item = items.get(position);
         int position = getPositionForId(id);
         if (position >= 0) {

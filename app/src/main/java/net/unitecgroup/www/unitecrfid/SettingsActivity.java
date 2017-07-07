@@ -26,6 +26,8 @@ import android.view.MenuItem;
  * API Guide</a> for more information on developing a Settings UI.
  */
 public class SettingsActivity extends BaseActivity {
+    public static final String SERVER_IP = "pref_server_ip";
+
     /**
      * A preference value change listener that updates the preference's summary
      * to reflect its new value.
@@ -166,6 +168,8 @@ public class SettingsActivity extends BaseActivity {
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static class GeneralPreferenceFragment extends PreferenceFragment {
+
+
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
@@ -176,7 +180,7 @@ public class SettingsActivity extends BaseActivity {
             // to their values. When their values change, their summaries are
             // updated to reflect the new value, per the Android Design
             // guidelines.
-            //bindPreferenceSummaryToValue(findPreference("example_text"));
+            bindPreferenceSummaryToValue(findPreference(SERVER_IP));
             //bindPreferenceSummaryToValue(findPreference("example_list"));
         }
 
