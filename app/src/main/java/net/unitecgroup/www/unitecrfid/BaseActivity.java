@@ -25,7 +25,7 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
 
     // delay to launch nav drawer item, to allow close animation to play
     static final int NAVDRAWER_LAUNCH_DELAY = 250;
-    // fade in and fade out durations for the main content when switching between
+    // fade in and fade out durations for the alerts content when switching between
     // different Activities of the app through the Nav Drawer
     static final int MAIN_CONTENT_FADEOUT_DURATION = 150;
     static final int MAIN_CONTENT_FADEIN_DURATION = 250;
@@ -134,28 +134,32 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
                 break;
-            case R.id.nav_gallery:
-                //intent = new Intent(this, GameActivity.class);
-                //createBackStack(intent);
+            case R.id.nav_alerts:
+                intent = new Intent(this, AlertsActivity.class);
+                createBackStack(intent);
                 break;
+            /*
             case R.id.nav_slideshow:
-                //intent = new Intent(this, TutorialActivity.class);
-                //intent.setAction(TutorialActivity.ACTION_SHOW_ANYWAYS);
-                //createBackStack(intent);
+                intent = new Intent(this, TutorialActivity.class);
+                intent.setAction(TutorialActivity.ACTION_SHOW_ANYWAYS);
+                createBackStack(intent);
                 break;
+            */
             case R.id.nav_settings:
                 intent = new Intent(this, SettingsActivity.class);
                 intent.putExtra( PreferenceActivity.EXTRA_SHOW_FRAGMENT, SettingsActivity.GeneralPreferenceFragment.class.getName() );
                 intent.putExtra( PreferenceActivity.EXTRA_NO_HEADERS, true );
                 createBackStack(intent);
                 break;
+            /*
             case R.id.nav_help:
-                //intent = new Intent(this, HelpActivity.class);
-                //createBackStack(intent);
+                intent = new Intent(this, HelpActivity.class);
+                createBackStack(intent);
                 break;
+            */
             case R.id.nav_about:
-                //intent = new Intent(this, HelpActivity.class);
-                //createBackStack(intent);
+                intent = new Intent(this, AboutActivity.class);
+                createBackStack(intent);
                 break;
             default:
         }

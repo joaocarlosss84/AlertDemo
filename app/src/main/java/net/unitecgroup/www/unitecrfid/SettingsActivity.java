@@ -120,7 +120,7 @@ public class SettingsActivity extends BaseActivity {
         int id = item.getItemId();
         if (id == android.R.id.home) {
             //finish();
-            Intent intent = new Intent(this, MainActivity.class);
+            Intent intent = new Intent(this, AlertsActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
             finish();
