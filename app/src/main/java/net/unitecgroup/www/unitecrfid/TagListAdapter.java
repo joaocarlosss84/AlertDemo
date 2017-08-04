@@ -1,6 +1,7 @@
 package net.unitecgroup.www.unitecrfid;
 
 
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by 20006030 on 01/08/2017.
@@ -39,9 +41,11 @@ class TagListAdapter extends RecyclerView.Adapter<TagListAdapter.ViewHolder> {
     public static class ViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
         public TextView mTextView;
+        public CardView mCardView;
         public ViewHolder(View v) {
             super(v);
             mTextView = (TextView) v.findViewById(R.id.textView);
+            mCardView = (CardView) v.findViewById(R.id.card_view);
         }
     }
 
@@ -69,6 +73,17 @@ class TagListAdapter extends RecyclerView.Adapter<TagListAdapter.ViewHolder> {
                 holder.mTextView.setText(mDataset.get(position));
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(ViewHolder holder, int position, List<Object> payloads) {
+        super.onBindViewHolder(holder, position, payloads);
+        if (payloads.isEmpty()) {
+            onBindViewHolder(holder, position);
+        } else if (payloads.contains(MainActivity.TAGBLINK)) {
+            //do something
+            onBindViewHolder(holder, position);
         }
     }
 
