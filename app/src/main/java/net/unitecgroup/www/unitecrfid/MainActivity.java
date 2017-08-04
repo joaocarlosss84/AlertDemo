@@ -38,6 +38,7 @@ import static android.R.attr.name;
 public class MainActivity extends BaseActivity {
 
     private static final String ITEM_LIST = "TAGS";
+    public static final String TAGBLINK = "TAGBLINK";
     private boolean mResume = true;
 
     private AlertDialog mEnableNfc;
@@ -138,7 +139,7 @@ public class MainActivity extends BaseActivity {
     }
 
     private void setRecyclerViewItemAnimator() {
-        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        mRecyclerView.setItemAnimator(new TagItemAnimator());
     }
 
 
@@ -246,7 +247,7 @@ public class MainActivity extends BaseActivity {
                 mAdapter.notifyItemInserted(myDataset.size() - 1);
             } else {
                 int index = myDataset.indexOf(sUID);
-                mAdapter.notifyItemChanged(index);
+                mAdapter.notifyItemChanged(index, TAGBLINK);
             }
 
             /*
