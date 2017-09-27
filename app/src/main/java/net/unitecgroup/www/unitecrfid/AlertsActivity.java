@@ -27,6 +27,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
@@ -428,7 +429,8 @@ public class AlertsActivity extends BaseActivity implements
         String gsonString = gson.toJson(alerts);
 
         try {
-            json = new JSONObject(gsonString);
+            json = new JSONObject();
+            json.put("alerts", gsonString);
         } catch (JSONException e) {
             e.printStackTrace();
         }
