@@ -3,6 +3,9 @@ package net.unitecgroup.www.unitecrfid;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by 20006030 on 12/06/2017.
  * https://stackoverflow.com/questions/6681217/help-passing-an-arraylist-of-objects-to-a-new-activity
@@ -10,9 +13,14 @@ import android.os.Parcelable;
 
 public class Alert implements Parcelable {
 
+    @Expose(serialize = true)
     private int _id;
+    @Expose(serialize = true)
     private String _time;
+    @Expose(serialize = true)
     private String _duration;
+    @Expose(serialize = true)
+    @SerializedName("Weekdays")
     private String _weekdays;
 
     public Alert() {

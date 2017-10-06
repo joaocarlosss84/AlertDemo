@@ -40,6 +40,9 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
     private Handler mHandler;
     protected SharedPreferences mSharedPreferences;
 
+    // WebServer
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

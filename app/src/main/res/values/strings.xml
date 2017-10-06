@@ -25,4 +25,5 @@
     <string name="privacy_friendly">This application belongs to Unitec Semicondutores S.A. developed by João Carlos Silva dos Santos. Images copyright Unitec Semicondutores S.A. and Google Inc.</string>
     <string name="about_author">Authors</string>
     <string name="about">About</string>
+    <string name="action_sendAlerts">send</string>
 </resources>

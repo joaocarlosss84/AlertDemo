@@ -21,5 +21,9 @@
         android:orderInCategory="100"
         android:title="@string/action_updateAlerts"
         app:showAsAction="never" />
-
+    <item
+        android:id="@+id/action_sendAlerts"
+        android:orderInCategory="100"
+        android:title="@string/action_sendAlerts"
+        app:showAsAction="never" />
 </menu>

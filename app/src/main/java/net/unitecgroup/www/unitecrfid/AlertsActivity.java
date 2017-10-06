@@ -1,14 +1,17 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.app.Application;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
@@ -19,6 +22,20 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -390,9 +407,61 @@ public class AlertsActivity extends BaseActivity implements
         } else if (id == R.id.action_updateAlerts) {
             oAlertListAdapter.notifyDataSetChanged();
             return true;
+        } else if (id == R.id.action_sendAlerts) {
+            sendAlerts();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void sendAlerts() {
+        // Reading all contacts
+        ArrayList<Alert> alerts = mDB.getAllAlerts();
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        String requestPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
+
+        GsonBuilder builder = new GsonBuilder();
+        builder.excludeFieldsWithoutExposeAnnotation();
+        Gson gson = builder.create();
+
+        JSONObject json = null;
+        String gsonString = gson.toJson(alerts);
+
+        try {
+            json = new JSONObject();
+            json.put("alerts", gsonString);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.POST,
+                requestPath,
+                json,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        //ServerResponse serverResponse = makeServerResponse(response);
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        //ServerResponse serverResponse = makeServerResponse(error);
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+
     }
 
     @Override
