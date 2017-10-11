@@ -32,6 +32,6 @@ echo Activating VENV
 
 REM Activate venv
 @echo off
-cmd /k "cd /d venv\Scripts & activate & cd /d ..\.. & python -m pip install --upgrade pip & python -m pip install -r requirements.txt & python -m pip install bitarray\bitarray-0.8.1-cp35-none-win32.whl & exit()"
+cmd /k "cd /d venv\Scripts & activate & cd /d ..\.. & python -m pip install --upgrade pip & python -m pip install -r requirements.txt & exit()"
 
 :DONE
