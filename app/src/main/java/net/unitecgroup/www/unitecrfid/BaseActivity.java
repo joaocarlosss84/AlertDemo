@@ -4,6 +4,9 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
+import android.nfc.tech.Ndef;
+import android.nfc.tech.NfcA;
+import android.nfc.tech.NfcV;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,8 +43,8 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
     private Handler mHandler;
     protected SharedPreferences mSharedPreferences;
 
-    // WebServer
-
+    // NFC
+    String[][] mTechList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +54,13 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
         mHandler = new Handler();
 
         overridePendingTransition(0, 0);
+
+        mTechList = new String[][]{
+                new String[] { NfcA.class.getName() },
+                new String[] { NfcV.class.getName() },
+                new String[] { Ndef.class.getName() }
+        };
+
     }
 
     @Override
