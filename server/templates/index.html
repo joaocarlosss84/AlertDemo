@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Unitec Pardini</title>
+
+    <link rel="shortcut icon" href="./static/img/favicon.ico">
+    <link rel="icon" href="static/img/favicon.ico">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap-theme.min.css" />
+
+    <!--
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    -->
+
+    <link rel="stylesheet" href="static/css/sticky-footer.css">
+    <link rel="stylesheet" href="static/css/main.css" />
+
+    <script src="static/jquery.min.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="static/bootstrap/js/bootstrap.min.js"></script>
+    <!--
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    -->    
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+        //carrega as bibliotecas da google        
+        google.charts.load('current', {'packages':['corechart']});
+        //google.charts.setOnLoadCallback(function(){localStorage.setItem("graficos_carregados", true);});
+    </script>
+</head>
+
+<body>
+
+
+  <div class="row">
+    <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+      <img src="/static/img/UnitecSolucoes.png" alt="Unitec Logo" style="width:100%;" >
+    </div>
+  
+    <div class="col-xs-10 col-sm-10 col-md-10 col-lg-10">
+      <div id="temp_chart"></div>
+    </div>
+
+  </div>
+  <div class="row">
+
+    <div class="col-xs12 col-sm-12 col-md-12 col-lg12" id="loader">
+      <div class="loader col-xs-offset-6"></div>            
+    </div>
+
+  </div>
+  <div class="row">
+
+    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 allcharts" id="allcharts">
+    <!-- pie charts came here -->          
+    </div>
+
+  </div>
+  <div class="row navbar-fixed-bottom" id="message">
+    <div class="col-sm-6 col-md-6 col-lg-7 col-xs-offset-3">
+      <div class="h1 alert" role="alert"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-xs12 col-sm-12 col-md-12 col-lg12">          
+      <footer><p>All rights reserved to Unitec Soluções.</p></footer>                         
+    </div>
+  </div>       
+  <script src="static/script.js"></script>
+</body>
+</html>
