@@ -31,6 +31,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -427,7 +428,7 @@ public class AlertsActivity extends BaseActivity implements
 
         try {
             json = new JSONObject();
-            json.put("alerts", gsonString);
+            json.put("alerts", new JSONArray(gsonString));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -460,6 +461,7 @@ public class AlertsActivity extends BaseActivity implements
         queue.add(JsonRequest);
 
     }
+
 
     @Override
     protected int getNavigationDrawerID() {
