@@ -151,20 +151,24 @@ public class DatabaseTable extends SQLiteOpenHelper {
                 sortOrder                                 // The sort order
         );
 
-        if (c != null) {
-            c.moveToFirst();
+        try {
+            if (c != null) {
+                c.moveToFirst();
 
-            int itemId = c.getInt(
-                    c.getColumnIndexOrThrow(AlertEntry._ID)
-            );
+                int itemId = c.getInt(
+                        c.getColumnIndexOrThrow(AlertEntry._ID)
+                );
 
-            Alert alert = new Alert(itemId,
-                    c.getString(1), c.getString(2), c.getString(3));
-            return alert;
-        } else {
+                Alert alert = new Alert(itemId,
+                        c.getString(1), c.getString(2), c.getString(3));
+                return alert;
+            } else {
+                return null;
+            }
+        } finally {
+            c.close();
             return null;
         }
-
     }
 
     // Updating single alert
@@ -221,17 +225,21 @@ public class DatabaseTable extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
 
-        // looping through all rows and adding to list
-        if (cursor.moveToFirst()) {
-            do {
-                Alert alert = new Alert();
-                alert.set_id(Integer.parseInt(cursor.getString(0)));
-                alert.set_time(cursor.getString(1));
-                alert.set_duration(cursor.getString(2));
-                alert.set_weekdays(cursor.getString(3));
-                // Adding contact to list
-                alertList.add(alert);
-            } while (cursor.moveToNext());
+        try {
+            // looping through all rows and adding to list
+            if (cursor.moveToFirst()) {
+                do {
+                    Alert alert = new Alert();
+                    alert.set_id(Integer.parseInt(cursor.getString(0)));
+                    alert.set_time(cursor.getString(1));
+                    alert.set_duration(cursor.getString(2));
+                    alert.set_weekdays(cursor.getString(3));
+                    // Adding contact to list
+                    alertList.add(alert);
+                } while (cursor.moveToNext());
+            }
+        } finally {
+            cursor.close();
         }
 
         // return contact list
@@ -243,10 +251,17 @@ public class DatabaseTable extends SQLiteOpenHelper {
         String countQuery = "SELECT  * FROM " + AlertEntry.TABLE_NAME;
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(countQuery, null);
-        cursor.close();
 
-        // return count
-        return cursor.getCount();
+        int iCount = -1;
+
+        try {
+            iCount = cursor.getCount();
+            cursor.close();
+        } finally {
+            cursor.close();
+        }
+
+        return iCount;
     }
 
     //Populate Database from file
