@@ -132,7 +132,7 @@ public class AlertsActivity extends BaseActivity implements
                     args.putString(ALERT_TIME, oAlert.get_time());
                     args.putString(ALERT_DURATION, oAlert.get_duration());
 
-                    args.putIntegerArrayList(ALERT_WEEKDAYS, arrayStringToIntegerArrayList(oAlert.get_weekdays()));
+                    args.putIntegerArrayList(ALERT_WEEKDAYS, oAlert.get_weekdays());
 
                     oAddAlert = new AddAlertDialog();
                     oAddAlert.setArguments(args);
@@ -160,9 +160,9 @@ public class AlertsActivity extends BaseActivity implements
 
     public void addAlerts() {
         ArrayList<Alert> aAlerts = new ArrayList<>();
-        aAlerts.add(new Alert("06:30", "00:15", "[2,3,4,5,6]"));
-        aAlerts.add(new Alert("12:00", "00:30", "[2,3]"));
-        aAlerts.add(new Alert("18:30", "00:10", "[4,5,6]"));
+        aAlerts.add(new Alert("06:30", "00:15", new ArrayList<Integer>() {{add(2); add(3); add(4); add(5);}}));
+        aAlerts.add(new Alert("12:00", "00:30", new ArrayList<Integer>() {{add(2); add(3);}}));
+        aAlerts.add(new Alert("18:30", "00:10", new ArrayList<Integer>() {{add(4); add(5); add(6);}}));
 
         for (Alert cn : aAlerts) {
             if (mDB.addAlert(cn) >= 0) {

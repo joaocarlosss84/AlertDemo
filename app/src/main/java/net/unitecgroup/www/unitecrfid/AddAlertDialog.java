@@ -200,7 +200,7 @@ public class AddAlertDialog extends DialogFragment {
                             oAlert.set_id(_id);
                             oAlert.set_time(oTextViewTime.getText().toString());
                             oAlert.set_duration(oTextViewDuration.getText().toString());
-                            oAlert.set_weekdays(oSelectedWeekdays.toString());
+                            oAlert.set_weekdays(new ArrayList<Integer>(oSelectedWeekdays));
 
                             oAlertListener.OnAlertSaved(_pos, oAlert);
 

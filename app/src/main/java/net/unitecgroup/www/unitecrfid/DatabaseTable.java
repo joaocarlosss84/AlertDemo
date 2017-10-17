@@ -111,7 +111,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
         ContentValues initialValues = new ContentValues();
         initialValues.put(AlertEntry.COL_TIME, alert.get_time());
         initialValues.put(AlertEntry.COL_DURATION, alert.get_duration());
-        initialValues.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays());
+        initialValues.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays().toString());
 
         // Insert the new row, returning the primary key value of the new row
         long id = db.insert(AlertEntry.TABLE_NAME, null, initialValues);
@@ -159,8 +159,10 @@ public class DatabaseTable extends SQLiteOpenHelper {
                         c.getColumnIndexOrThrow(AlertEntry._ID)
                 );
 
+                ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(c.getString(3));
+
                 Alert alert = new Alert(itemId,
-                        c.getString(1), c.getString(2), c.getString(3));
+                        c.getString(1), c.getString(2), weekdays);
                 return alert;
             } else {
                 return null;
@@ -178,7 +180,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(AlertEntry.COL_TIME, alert.get_time());
         values.put(AlertEntry.COL_DURATION, alert.get_duration());
-        values.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays());
+        values.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays().toString());
 
         // Which row to update, based on the time
         //String selection = AlertEntry.COL_TIME + " LIKE ?";
@@ -223,23 +225,25 @@ public class DatabaseTable extends SQLiteOpenHelper {
         String selectQuery = "SELECT  * FROM " + AlertEntry.TABLE_NAME;
 
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(selectQuery, null);
+        Cursor c = db.rawQuery(selectQuery, null);
 
         try {
             // looping through all rows and adding to list
-            if (cursor.moveToFirst()) {
+            if (c.moveToFirst()) {
                 do {
                     Alert alert = new Alert();
-                    alert.set_id(Integer.parseInt(cursor.getString(0)));
-                    alert.set_time(cursor.getString(1));
-                    alert.set_duration(cursor.getString(2));
-                    alert.set_weekdays(cursor.getString(3));
+                    alert.set_id(Integer.parseInt(c.getString(0)));
+                    alert.set_time(c.getString(1));
+                    alert.set_duration(c.getString(2));
+                    //alert.set_weekdays(c.getString(3));
+                    ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(c.getString(3));
+                    alert.set_weekdays(weekdays);
                     // Adding contact to list
                     alertList.add(alert);
-                } while (cursor.moveToNext());
+                } while (c.moveToNext());
             }
         } finally {
-            cursor.close();
+            c.close();
         }
 
         // return contact list
@@ -287,7 +291,8 @@ public class DatabaseTable extends SQLiteOpenHelper {
             while ((line = reader.readLine()) != null) {
                 String[] strings = TextUtils.split(line, "-");
                 if (strings.length < 3) continue;
-                long id = addAlert(new Alert(0, strings[0].trim(), strings[1].trim(), strings[2].trim()));
+                ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(strings[2].trim());
+                long id = addAlert(new Alert(0, strings[0].trim(), strings[1].trim(), weekdays));
                 if (id < 0) {
                     Log.e(TAG, "unable to add word: " + strings[0].trim());
                 }
