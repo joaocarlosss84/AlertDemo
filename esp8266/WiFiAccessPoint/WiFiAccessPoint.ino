@@ -35,6 +35,9 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 #include <map>
+#include <list>
+
+#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
 //using namespace std;
 
@@ -54,10 +57,41 @@ struct Alerts {
   byte bWeekdays;
 };
 
+struct WeekAlert {
+  WeekAlert() : iId(0), iTime(0) {}
+  WeekAlert(int newId, int newTime)
+         : iId(newId), iTime(newTime) {}
+
+  int iTime;
+  int iId;  
+};
+
 std::map<int, Alerts> AlertsMap;
-//std::vector<int> 
+std::list<WeekAlert> WeekdaysList[8];
 
 ESP8266WebServer server(80);
+
+bool compFirst(const WeekAlert & a, const WeekAlert & b) {
+  return a.iTime < b.iTime;
+}
+
+/* Function to sort an array using insertion sort*/
+void insertionSort(int arr[], int n) {
+   int i, key, j;
+   for (i = 1; i < n; i++) {
+       key = arr[i];
+       j = i-1;
+ 
+       /* Move elements of arr[0..i-1], that are
+          greater than key, to one position ahead
+          of their current position */
+       while (j >= 0 && arr[j] > key) {
+           arr[j+1] = arr[j];
+           j = j-1;
+       }
+       arr[j+1] = key;
+   }
+}
 
 /* Just a little test message.  Go to http://192.168.1.1 in a web browser
  * connected to this access point to see it.
@@ -92,21 +126,30 @@ void dumpJsonObject(JsonObject& obj) {
   }        
 }
 
+String convertTime(int iTime) {
+  int iHour, iMin, i;
+  iHour = iTime/60;
+  iMin = iTime%60;
+  return String(iHour) + ":" + String(iMin);
+}
+
 void dumpAlertsMap() {
   //std::map<int, Alerts>::iterator i
-  int iHour, iMin;
+  int iHour, iMin, i;
   
   for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
     Alerts alert = (*it).second;
     
     Serial.println("ID: " + String( (*it).first ));    
-    iHour = alert.iTime/60;
-    iMin = alert.iTime%60;
-    Serial.println("TIME: " + String( alert.iTime ) + " = " + String(iHour) +":"+String(iMin));
+    //iHour = alert.iTime/60;
+    //iMin = alert.iTime%60;
+    Serial.println("TIME: " + String( alert.iTime ) + " = " + convertTime(alert.iTime));
 
-    iHour = alert.iDuration/60;
-    iMin = alert.iDuration%60;
-    Serial.println("DURATION: " + String( alert.iDuration ) + " = " + String(iHour) +":"+String(iMin));
+    //iHour = alert.iDuration/60;
+    //iMin = alert.iDuration%60;
+        
+    //Serial.println("DURATION: " + String( alert.iDuration ) + " = " + String(iHour) +":"+String(iMin));
+    Serial.println("DURATION: " + String( alert.iDuration ) + " = " + convertTime(alert.iDuration));
     Serial.print("WEEKDAYS: ");
     Serial.print(alert.bWeekdays, HEX);
     Serial.print(" = ");
@@ -116,6 +159,23 @@ void dumpAlertsMap() {
     
     //Serial << *i << endl;
     //Serial << "Took: " << (int) (finish - start) << " milliseconds." << endl;
+  }
+}
+
+void dumpWeekdaysList() {
+  int i, iTime, iId;
+  std::list<WeekAlert> oList;
+
+  Serial.println("Weekdays List");
+  for (i=0; i<8; i++){
+    oList = WeekdaysList[i];
+    Serial.print(String(i) + ": ");
+    for (auto it = oList.begin(); it != oList.end(); it++) {
+      iId = (*it).iId;
+      iTime = (AlertsMap[ iId ]).iTime;
+      Serial.print(String( iId ) + "-" + convertTime(iTime) + " ");
+    }
+    Serial.println();
   }
 }
 
@@ -183,6 +243,7 @@ void handleAlerts() {
     JsonObject& _root = jsonBuffer.parseObject(ReqJson);
     JsonArray& alerts = _root["alerts"];     
     Alerts oAlert;
+    int i;
     
     //alert == {"_duration":"00:15","_id":1,"_time":"06:30","Weekdays":[2,3,4,5,6]}
     for(JsonArray::iterator it=alerts.begin(); it!=alerts.end(); ++it) 
@@ -190,9 +251,29 @@ void handleAlerts() {
         JsonObject& alert = *it;
         oAlert = parseAlertJson(alert);
         AlertsMap[ alert["_id"] ] = oAlert;        
+        
+        //check weekdays and add to weekdays list
+        for (i = 0; i < 8; i++) {
+          if (CHECK_BIT(oAlert.bWeekdays, i)) {
+            //WeekdaysList[i].push_back(oAlert.iId);    
+            WeekdaysList[i].push_back( WeekAlert(oAlert.iId, oAlert.iTime) );                
+          }
+        }
     }
 
     dumpAlertsMap();
+    dumpWeekdaysList();
+
+
+    //Sort all weekdays time
+    for (i = 0; i < 8; i++) {
+      WeekdaysList[i].sort(compFirst);          
+    }
+
+    Serial.println("SORTED");
+    
+    dumpWeekdaysList();
+
  
     //server.send(200, "text/plain", message);
     server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
