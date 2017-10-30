@@ -75,24 +75,6 @@ bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
 }
 
-/* Function to sort an array using insertion sort*/
-void insertionSort(int arr[], int n) {
-   int i, key, j;
-   for (i = 1; i < n; i++) {
-       key = arr[i];
-       j = i-1;
- 
-       /* Move elements of arr[0..i-1], that are
-          greater than key, to one position ahead
-          of their current position */
-       while (j >= 0 && arr[j] > key) {
-           arr[j+1] = arr[j];
-           j = j-1;
-       }
-       arr[j+1] = key;
-   }
-}
-
 /* Just a little test message.  Go to http://192.168.1.1 in a web browser
  * connected to this access point to see it.
  */
@@ -100,140 +82,71 @@ void handleRoot() {
 	server.send(200, "text/html", "<h1>You are connected</h1>");
 }
 
-/*
- * Handle HTTP Request and defines its header
-void handleJson(WiFiClient& client, JsonObject& json) {
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: application/json");
-  client.println("Access-Control-Allow-Origin: *");
-  client.println("Connection: close");
-  client.println();
-
-  json.prettyPrintTo(client);
-}
-*/
-
-void dumpJsonObject(JsonObject& obj) {
-  for(JsonObject::iterator at=obj.begin(); at!=obj.end(); ++at) 
-  {
-    // *at contains the key/value pair
-    const char* key = at->key;
-
-    // at->value contains the JsonVariant which can be casted as usual
-    const char* value = at->value;
-
-    Serial.println( String(key) + " - " + String(value) );            
-  }        
-}
-
-String convertTime(int iTime) {
-  int iHour, iMin, i;
-  iHour = iTime/60;
-  iMin = iTime%60;
-  return String(iHour) + ":" + String(iMin);
-}
-
-void dumpAlertsMap() {
-  //std::map<int, Alerts>::iterator i
-  int iHour, iMin, i;
+void handleDeleteAlerts() {
+  String ReqJson = server.arg("plain");
+  String message = "DELETE received:\n";
+         message += ReqJson;
+         message += "\n";
   
-  for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
-    Alerts alert = (*it).second;
-    
-    Serial.println("ID: " + String( (*it).first ));    
-    //iHour = alert.iTime/60;
-    //iMin = alert.iTime%60;
-    Serial.println("TIME: " + String( alert.iTime ) + " = " + convertTime(alert.iTime));
-
-    //iHour = alert.iDuration/60;
-    //iMin = alert.iDuration%60;
-        
-    //Serial.println("DURATION: " + String( alert.iDuration ) + " = " + String(iHour) +":"+String(iMin));
-    Serial.println("DURATION: " + String( alert.iDuration ) + " = " + convertTime(alert.iDuration));
-    Serial.print("WEEKDAYS: ");
-    Serial.print(alert.bWeekdays, HEX);
-    Serial.print(" = ");
-    Serial.print(alert.bWeekdays, BIN);
-    Serial.println();
-    Serial.println();
-    
-    //Serial << *i << endl;
-    //Serial << "Took: " << (int) (finish - start) << " milliseconds." << endl;
-  }
-}
-
-void dumpWeekdaysList() {
-  int i, iTime, iId;
-  std::list<WeekAlert> oList;
-
-  Serial.println("Weekdays List");
-  for (i=0; i<8; i++){
-    oList = WeekdaysList[i];
-    Serial.print(String(i) + ": ");
-    for (auto it = oList.begin(); it != oList.end(); it++) {
-      iId = (*it).iId;
-      iTime = (AlertsMap[ iId ]).iTime;
-      Serial.print(String( iId ) + "-" + convertTime(iTime) + " ");
-    }
-    Serial.println();
-  }
-}
-
-Alerts parseAlertJson(JsonObject& alert) {
-  int iTime = 0;
-  int iDuration = 0;
-  int aWeekdays[7];
-  byte bWeekdays = 0;
-  int iHour = 0;
-  int iMin = 0;
+  Serial.println(message);
+  
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& _root = jsonBuffer.parseObject(ReqJson);
+  JsonArray& alerts = _root["alerts"];     
+  int i;
+  std::list<WeekAlert>::iterator wki;
   Alerts oAlert;
-  String sTime = "";
-  int i = 0;
-  int weekdaysCount = 0;
-  int id = alert["_id"];
   
-  //Parsing string time HH:MM to integer
-  sTime = alert["_time"].as<char*>();
-  iHour = sTime.substring(0,2).toInt();
-  iMin = sTime.substring(3).toInt();
-  iTime = iHour*60 + iMin;        
-  
-  sTime = alert["_duration"].as<char*>();
-  iHour = sTime.substring(0,2).toInt();
-  iMin = sTime.substring(3).toInt();
-  iDuration = iHour*60 + iMin;        
-          
-  //Copying the weekdays int[]
-  // Mon Tue Wed Thu Fri Sat Sun
-  // 2   3   4   5   6   7   1        
-  weekdaysCount = alert["Weekdays"].as<JsonArray>().copyTo(aWeekdays);
-  //Serial.println("\tWeekdays: " + String(weekdaysCount));
-  for (i = 0; i < weekdaysCount; i++) {
-    //Serial.println("\t ["+ String(i) +"] = " + String(aWeekdays[i]));
-    bWeekdays |= 1 << aWeekdays[i];
+  //alert == {"_duration":"00:15","_id":1,"_time":"06:30","Weekdays":[2,3,4,5,6]}
+  for(JsonArray::iterator jsonIt=alerts.begin(); jsonIt!=alerts.end(); ++jsonIt) {
+        
+    JsonObject& alert = *jsonIt;    
+    Serial.println("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
+    
+    auto it = AlertsMap.find( alert["_id"].as<int>() );
+    
+    if (it != AlertsMap.end()) {
+      oAlert = (*it).second;
+      Serial.println("DELETING ID: " + String(oAlert.iId) );
+    
+      //search for Alert Id inside weekdaysList to remove it
+      for (i = 0; i < 8; i++) {
+        if (CHECK_BIT(oAlert.bWeekdays, i)) {
+          //delete weekday
+          wki = WeekdaysList[i].begin();
+                              
+          //iterate in all values inside the week
+          Serial.print("DELETING WEEKDAYs: ");
+          while(wki != WeekdaysList[i].end()) {
+            if ((*wki).iId == oAlert.iId ) {
+              //get out of the loop
+              Serial.print(String(i) + " ");
+              wki = WeekdaysList[i].erase(wki);
+              break;
+            }
+            ++wki;
+          }
+          Serial.println(); 
+        }            
+      }
+
+      //Now delete the alert from DB
+      AlertsMap.erase( it );      
+      server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
+      
+    } else {
+      Serial.print("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
+      server.send ( 404, "application/json", "{\"Status\":\"Not Found\"}" );
+    }    
   }
-
-  //alert.prettyPrintTo(Serial);
-
-  /*
-  Serial.println("id =" + String(id));  
-  alert["_duration"].prettyPrintTo(Serial);
-  Serial.println(" Duration = " + String(iDuration));  
-  alert["_time"].prettyPrintTo(Serial);
-  Serial.println(" Time = " + String(iTime));  
-  Serial.println(bWeekdays, HEX);
-  Serial.println();
-  */
-  
-  oAlert = (Alerts) {.iId = id, .iTime = iTime, .iDuration = iDuration, .bWeekdays = bWeekdays};
-  //oAlert = Alerts(iTime, iDuration, bWeekdays);
-  
-  return oAlert;
 }
 
+/**
+ * Main Function
+ */
 void handleAlerts() {
     String ReqJson = server.arg("plain");
-    String message = "Body received:\n";
+    String message = "POST received:\n";
            message += ReqJson;
            message += "\n";
 
@@ -243,27 +156,26 @@ void handleAlerts() {
     JsonObject& _root = jsonBuffer.parseObject(ReqJson);
     JsonArray& alerts = _root["alerts"];     
     Alerts oAlert;
-    int i;
+    int i;    
     
     //alert == {"_duration":"00:15","_id":1,"_time":"06:30","Weekdays":[2,3,4,5,6]}
     for(JsonArray::iterator it=alerts.begin(); it!=alerts.end(); ++it) 
     {
         JsonObject& alert = *it;
         oAlert = parseAlertJson(alert);
-        AlertsMap[ alert["_id"] ] = oAlert;        
+        AlertsMap[ alert["_id"].as<int>() ] = oAlert;        
         
-        //check weekdays and add to weekdays list
+        //check if the weekday is set and add it to WeekdaysList
         for (i = 0; i < 8; i++) {
           if (CHECK_BIT(oAlert.bWeekdays, i)) {
-            //WeekdaysList[i].push_back(oAlert.iId);    
-            WeekdaysList[i].push_back( WeekAlert(oAlert.iId, oAlert.iTime) );                
+            //Check if it exists and update if necessary, add it otherwise
+            WeekdaysListInsert(WeekdaysList[i], WeekAlert(oAlert.iId, oAlert.iTime));
           }
         }
     }
 
     dumpAlertsMap();
     dumpWeekdaysList();
-
 
     //Sort all weekdays time
     for (i = 0; i < 8; i++) {
@@ -273,12 +185,43 @@ void handleAlerts() {
     Serial.println("SORTED");
     
     dumpWeekdaysList();
-
- 
-    //server.send(200, "text/plain", message);
+   
     server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
 }
 
+void handleDumpAlerts() {
+  dumpAlertsMap();
+  dumpWeekdaysList();
+
+  int i;
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  //root["sensor"] = "gps";
+  JsonArray& alerts = root.createNestedArray("alerts");
+  //alerts.add(48.756080);
+  
+  for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
+    Alerts oAlert = (*it).second;
+    JsonObject& JsonAlert = jsonBuffer.createObject();
+    JsonAlert["_id"] = oAlert.iId;
+    JsonAlert["_time"] = oAlert.iTime;
+    JsonAlert["_duration"] = oAlert.iDuration;
+    JsonArray& JsonWeekdays = JsonAlert.createNestedArray("Weekdays");
+
+    for (i = 0; i < 8; i++) {
+      if (CHECK_BIT(oAlert.bWeekdays, i)) {        
+        JsonWeekdays.add(i);
+      }
+    }
+    
+    alerts.add(JsonAlert);
+  }  
+
+  String JSON;
+  root.printTo(JSON);
+  
+  server.send ( 200, "application/json", JSON );
+}
 
 void handleNotFound() {
   //digitalWrite ( led, 1 );
@@ -338,7 +281,9 @@ void setup() {
   
   server.onNotFound ( handleNotFound );
 	server.on("/", handleRoot);
-  server.on("/alerts", handleAlerts);
+  server.on("/alerts", HTTP_GET, handleDumpAlerts);
+  server.on("/alerts", HTTP_POST, handleAlerts);
+  server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
 	server.begin();
 	Serial.println("HTTP server started");
 }
