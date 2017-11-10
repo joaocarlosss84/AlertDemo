@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -16,17 +17,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import static android.content.ContentValues.TAG;
 
 /**
  * Created by 20006030 on 12/06/2017.
+ * To avoid multiple instances of the database, the helper must be static
+ * https://stackoverflow.com/questions/18147354/sqlite-connection-leaked-although-everything-closed/18148718#18148718
  */
 
 public class DatabaseTable extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 1;
-    public static final String DATABASE_NAME = "alerts.db";
+    private static final int DATABASE_VERSION = 1;
+    private static final String DATABASE_NAME = "alerts.db";
 
     private static final String TEXT_TYPE = " TEXT";
     private static final String COMMA_SEP = ",";
@@ -49,14 +53,23 @@ public class DatabaseTable extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(SQL_CREATE_ENTRIES);
+        try {
+            db.execSQL(SQL_CREATE_ENTRIES);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.w("DatabaseTable", "Upgrading database from version " + oldVersion + " to "
                 + newVersion + ", which will destroy all old data");
-        db.execSQL(SQL_DELETE_ENTRIES);
+
+        try {
+            db.execSQL(SQL_DELETE_ENTRIES);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         onCreate(db);
     }
 
@@ -64,9 +77,21 @@ public class DatabaseTable extends SQLiteOpenHelper {
         onUpgrade(db, oldVersion, newVersion);
     }
 
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        this.close();
+        super.finalize();
+    }
+
     public void deleteAll() {
         SQLiteDatabase db = getReadableDatabase();
         db.delete(AlertEntry.TABLE_NAME, null, null);
+        db.close();
     }
 
     public static class AlertEntry implements BaseColumns {
@@ -86,16 +111,17 @@ public class DatabaseTable extends SQLiteOpenHelper {
     private Cursor query(String selection, String[] selectionArgs, String[] columns) {
         SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
         builder.setTables(AlertEntry.TABLE_NAME);
-
-        Cursor cursor = builder.query(this.getReadableDatabase(),
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = builder.query(db,
                 columns, selection, selectionArgs, null, null, null);
 
-        if (cursor == null) {
-            return null;
-        } else if (!cursor.moveToFirst()) {
+
+        if (!cursor.moveToFirst()) {
             cursor.close();
+            db.close();
             return null;
         }
+        db.close();
         return cursor;
     }
 
@@ -114,8 +140,13 @@ public class DatabaseTable extends SQLiteOpenHelper {
         initialValues.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays().toString());
 
         // Insert the new row, returning the primary key value of the new row
-        long id = db.insert(AlertEntry.TABLE_NAME, null, initialValues);
-        alert.set_id( (int) id);
+        long id = -1;
+        try {
+            id = db.insert(AlertEntry.TABLE_NAME, null, initialValues);
+            alert.set_id((int) id);
+        } finally {
+            //db.close();
+        }
 
         return id;
     }
@@ -151,6 +182,8 @@ public class DatabaseTable extends SQLiteOpenHelper {
                 sortOrder                                 // The sort order
         );
 
+        Alert alert = null;
+
         try {
             if (c != null) {
                 c.moveToFirst();
@@ -161,16 +194,14 @@ public class DatabaseTable extends SQLiteOpenHelper {
 
                 ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(c.getString(3));
 
-                Alert alert = new Alert(itemId,
+                alert = new Alert(itemId,
                         c.getString(1), c.getString(2), weekdays);
-                return alert;
-            } else {
-                return null;
             }
         } finally {
             c.close();
-            return null;
+            db.close();
         }
+        return alert;
     }
 
     // Updating single alert
@@ -190,11 +221,17 @@ public class DatabaseTable extends SQLiteOpenHelper {
         String selection = AlertEntry._ID + " = ?";
         String[] selectionArgs = { Integer.toString(alert.get_id()) };
 
-        int count = db.update(
-                AlertEntry.TABLE_NAME,
-                values,
-                selection,
-                selectionArgs);
+        int count = -1;
+
+        try {
+            count = db.update(
+                    AlertEntry.TABLE_NAME,
+                    values,
+                    selection,
+                    selectionArgs);
+        } finally {
+            db.close();
+        }
 
         // updating row
         return (count == 1);
@@ -212,9 +249,14 @@ public class DatabaseTable extends SQLiteOpenHelper {
         //String[] selectionArgs = { "MyTitle" };
         String[] selectionArgs = { Integer.toString(alert.get_id()) };
         // Issue SQL statement.
-        int rows = db.delete(AlertEntry.TABLE_NAME, selection, selectionArgs);
+        int rows = 0;
 
-        //db.close();
+        try {
+            rows = db.delete(AlertEntry.TABLE_NAME, selection, selectionArgs);
+        } finally {
+            db.close();
+        }
+
         return (rows == 1);
     }
 
@@ -224,7 +266,14 @@ public class DatabaseTable extends SQLiteOpenHelper {
         // Select All Query
         String selectQuery = "SELECT  * FROM " + AlertEntry.TABLE_NAME;
 
-        SQLiteDatabase db = this.getWritableDatabase();
+
+        SQLiteDatabase db = null;
+        try {
+            db = this.getWritableDatabase();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         Cursor c = db.rawQuery(selectQuery, null);
 
         try {
@@ -236,7 +285,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
                     alert.set_time(c.getString(1));
                     alert.set_duration(c.getString(2));
                     //alert.set_weekdays(c.getString(3));
-                    ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(c.getString(3));
+                    ArrayList<Integer> weekdays = arrayStringToIntegerArrayList(c.getString(3));
                     alert.set_weekdays(weekdays);
                     // Adding contact to list
                     alertList.add(alert);
@@ -244,6 +293,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
             }
         } finally {
             c.close();
+            db.close();
         }
 
         // return contact list
@@ -261,15 +311,17 @@ public class DatabaseTable extends SQLiteOpenHelper {
         try {
             iCount = cursor.getCount();
             cursor.close();
+            db.close();
         } finally {
             cursor.close();
+            db.close();
         }
 
         return iCount;
     }
 
     //Populate Database from file
-    private void loadDictionary() {
+    public void loadDictionary() {
         new Thread(new Runnable() {
             public void run() {
                 try {
@@ -291,7 +343,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
             while ((line = reader.readLine()) != null) {
                 String[] strings = TextUtils.split(line, "-");
                 if (strings.length < 3) continue;
-                ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(strings[2].trim());
+                ArrayList<Integer> weekdays = arrayStringToIntegerArrayList(strings[2].trim());
                 long id = addAlert(new Alert(0, strings[0].trim(), strings[1].trim(), weekdays));
                 if (id < 0) {
                     Log.e(TAG, "unable to add word: " + strings[0].trim());
@@ -302,4 +354,15 @@ public class DatabaseTable extends SQLiteOpenHelper {
         }
     }
 
+    //Creates a ArrayList<Integer> from String "[1,2,3]"
+    public static ArrayList<Integer> arrayStringToIntegerArrayList(String arrayString){
+        String removedBrackets = arrayString.substring(1, arrayString.length() - 1);
+        String[] individualNumbers = removedBrackets.split(",");
+        ArrayList<Integer> integerArrayList = new ArrayList<>();
+        for(String numberString : individualNumbers){
+            integerArrayList.add(Integer.parseInt(numberString.trim()));
+        }
+        Collections.sort(integerArrayList);
+        return integerArrayList;
+    }
 }

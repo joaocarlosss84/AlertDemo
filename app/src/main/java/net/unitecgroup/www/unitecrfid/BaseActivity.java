@@ -150,7 +150,8 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
                 startActivity(intent);
                 break;
             case R.id.nav_alerts:
-                intent = new Intent(this, AlertsActivity.class);
+                //intent = new Intent(this, AlertsActivity.class);
+                intent = new Intent(this, BLEActivity.class);
                 createBackStack(intent);
                 break;
             /*

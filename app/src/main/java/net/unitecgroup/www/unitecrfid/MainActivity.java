@@ -67,11 +67,6 @@ public class MainActivity extends BaseActivity {
         if (savedInstanceState == null) {
             //myDataset = new HashSet<>();
             myDataset = new ArrayList<>();
-            /*
-            for (int i = 0; i < 3; i++) {
-                myDataset.add("row " + i);
-            }
-            */
         } else {
             myDataset = savedInstanceState.getStringArrayList(ITEM_LIST);
             //myDataset = (HashSet<String>) savedInstanceState.getSerializable(ITEM_LIST);
@@ -92,8 +87,6 @@ public class MainActivity extends BaseActivity {
 
         setRecyclerViewItemTouchListener();
         setRecyclerViewItemAnimator();
-
-
 
         // Check if there is an NFC hardware component.
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);

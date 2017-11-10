@@ -1,23 +1,25 @@
 package net.unitecgroup.www.unitecrfid;
 
 import android.content.Context;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-/**
- * Created by 20006030 on 12/06/2017.
- */
-
 public class DatabaseHelper extends SQLiteOpenHelper {
-    public static final String DATABASE_NAME = "alerts.db";
-    public static final int DATABASE_VERSION = 1;
-    public static final String TABLE_NAME = "alerts_table";
-    public static final String COL_1 = "ID";
-    public static final String COL_2 = "TIME";
-    public static final String COL_3 = "DURATION";
-    public static final String COL_4 = "WEEKDAYS";
 
-    public DatabaseHelper(Context context) {
+    private static DatabaseHelper mInstance = null;
+
+    private static final String DATABASE_NAME = "alerts.db";
+    private static final int DATABASE_VERSION = 1;
+    private static final String TABLE_NAME = "alerts_table";
+    private static final String COL_1 = "ID";
+    private static final String COL_2 = "TIME";
+    private static final String COL_3 = "DURATION";
+    private static final String COL_4 = "WEEKDAYS";
+
+
+
+    public DatabaseHelper(Context context) throws SQLException {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         SQLiteDatabase db = this.getWritableDatabase();
     }
