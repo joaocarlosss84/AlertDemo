@@ -6,6 +6,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -13,6 +14,9 @@ import java.util.List;
 
 /**
  * Created by 20006030 on 01/08/2017.
+ *
+ * https://stackoverflow.com/questions/5972898/create-a-progress-bar-in-android-that-change-its-color-while-it-is-progressing-a
+ * https://stackoverflow.com/questions/18800290/how-to-change-progressbar-color
  */
 
 class TagListAdapter extends RecyclerView.Adapter<TagListAdapter.ViewHolder> {
@@ -42,10 +46,12 @@ class TagListAdapter extends RecyclerView.Adapter<TagListAdapter.ViewHolder> {
         // each data item is just a string in this case
         public TextView mTextView;
         public CardView mCardView;
+        public ProgressBar mProgressBar;
         public ViewHolder(View v) {
             super(v);
             mTextView = (TextView) v.findViewById(R.id.textView);
             mCardView = (CardView) v.findViewById(R.id.card_view);
+            mProgressBar = (ProgressBar) v.findViewById(R.id.progressBar);
         }
     }
 
@@ -83,7 +89,10 @@ class TagListAdapter extends RecyclerView.Adapter<TagListAdapter.ViewHolder> {
             onBindViewHolder(holder, position);
         } else if (payloads.contains(MainActivity.TAGBLINK)) {
             //do something
+            int progress = holder.mProgressBar.getProgress();
+            holder.mProgressBar.setProgress(progress+10);
             onBindViewHolder(holder, position);
+
         }
     }
 

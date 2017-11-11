@@ -2,7 +2,6 @@ package net.unitecgroup.www.unitecrfid;
 
 import android.app.SearchManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -10,7 +9,6 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
@@ -28,7 +26,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -37,7 +34,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
@@ -45,34 +41,56 @@ import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_POS;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_WEEKDAYS;
 
-/**
- *
- * http://nemanjakovacevic.net/blog/english/2016/01/12/recyclerview-swipe-to-delete-no-3rd-party-lib-necessary/
- * https://github.com/ashrithks/SwipeRecyclerView
- */
-public class AlertsActivity extends BaseActivity implements
+public class BLEActivity extends BaseActivity implements
         AddAlertDialog.OnAlertSavedListener,
-        AlertListAdapter.OnItemDeletedListener {
+        AlertListAdapter.OnItemDeletedListener{
 
+    DatabaseTable mDB;
     private static final String ALERT_LIST = "alertList";
     private static final String ALERT_DELETE_LIST = "alertDeleteList";
     static AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
 
-    FragmentManager fm;
     AddAlertDialog oAddAlert;
-
-    DatabaseTable mDB;
-
-    ServerCommunication mServer;
+    FragmentManager fm;
     FloatingActionButton fab;
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+
+        oAlertListAdapter.items = mDB.getAllAlerts();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList(ALERT_LIST, oAlertListAdapter.items);
+        outState.putIntegerArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
+
+        super.onSaveInstanceState(outState);
+    }
+
+    // This callback is called only when there is a saved instance previously saved using
+    // onSaveInstanceState(). We restore some state in onCreate() while we can optionally restore
+    // other state here, possibly usable after onStart() has completed.
+    // The savedInstanceState Bundle is same as the one used in onCreate().
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
+        oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_alerts);
+        setContentView(R.layout.activity_ble);
 
-        fm = getSupportFragmentManager();
+        //mDB = DatabaseTable.getInstance(this.getApplication());
+        //mDB = new DatabaseManager(this);
+        mDB = Application.getDatabase();
+
+        mDB.loadDictionary();
 
         //Floating Action Button
         fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -84,115 +102,61 @@ public class AlertsActivity extends BaseActivity implements
             }
         });
 
-        //Receiving query from SEARCH
-        // Get the intent, verify the action and get the query
-        /*
-        Intent intent = getIntent();
-        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            String query = intent.getStringExtra(SearchManager.QUERY);
-            //doMySearch(query);
-        }
-        */
+
+        ArrayList<Alert> alerts = new ArrayList<>();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
-
-        mDB = Application.getDatabase();
-
-        //mServer = new ServerCommunication(this);
-
-        // Reading all contacts
-        //ArrayList<Alert> alerts = mDB.getAllAlerts();
-        ArrayList<Alert> alerts = new ArrayList<>();
 
         //Do not create more than one Adapter to avoid problems with screen rotation
         if (oAlertListAdapter == null)
             oAlertListAdapter = new AlertListAdapter(this, alerts);
 
+        fm = getSupportFragmentManager();
+
         setUpRecyclerView();
-
     }
 
     @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-        oAlertListAdapter.items = mDB.getAllAlerts();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        //mDB.close();
+    protected int getNavigationDrawerID() {
+        return R.id.nav_alerts;
     }
 
     private void setUpRecyclerView() {
 
         oAlertListAdapter.setUndoOn(true);
         //mRecyclerView.setLayoutManager(new GridLayoutManager(this,2));
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this.getBaseContext()));
+        LinearLayoutManager oLLM = new LinearLayoutManager(this.getBaseContext());
+
+        mRecyclerView.setLayoutManager(oLLM);
         mRecyclerView.setAdapter(oAlertListAdapter);
         mRecyclerView.setHasFixedSize(true);
 
         //Create the Alert Edit Dialog, load the previous data.
         oAlertListAdapter.SetOnItemClickListener(
-            new AlertListAdapter.OnItemClickListener() {
-                @Override
-                public void onItemClick(View view, int position, String id) {
-                    Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
+                new AlertListAdapter.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(View view, int position, String id) {
+                        Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
 
-                    //Save alert data to pass it to Dialog
-                    Alert oAlert = oAlertListAdapter.items.get(position);
-                    args.putInt(ALERT_POS, position);
-                    args.putInt(ALERT_ID, oAlert.get_id());
-                    args.putString(ALERT_TIME, oAlert.get_time());
-                    args.putString(ALERT_DURATION, oAlert.get_duration());
+                        //Save alert data to pass it to Dialog
+                        Alert oAlert = oAlertListAdapter.items.get(position);
+                        args.putInt(ALERT_POS, position);
+                        args.putInt(ALERT_ID, oAlert.get_id());
+                        args.putString(ALERT_TIME, oAlert.get_time());
+                        args.putString(ALERT_DURATION, oAlert.get_duration());
 
-                    args.putIntegerArrayList(ALERT_WEEKDAYS, oAlert.get_weekdays());
+                        args.putIntegerArrayList(ALERT_WEEKDAYS, oAlert.get_weekdays());
 
-                    oAddAlert = new AddAlertDialog();
-                    oAddAlert.setArguments(args);
-                    oAddAlert.show(fm, "Dialog Fragment");
+                        oAddAlert = new AddAlertDialog();
+                        oAddAlert.setArguments(args);
+                        oAddAlert.show(fm, "Dialog Fragment");
 
+                    }
                 }
-            }
         );
 
         setUpItemTouchHelper();
         setUpAnimationDecoratorHelper();
-    }
-
-    //Creates a ArrayList<Integer> from String "[1,2,3]"
-    public static ArrayList<Integer> arrayStringToIntegerArrayList(String arrayString){
-        String removedBrackets = arrayString.substring(1, arrayString.length() - 1);
-        String[] individualNumbers = removedBrackets.split(",");
-        ArrayList<Integer> integerArrayList = new ArrayList<>();
-        for(String numberString : individualNumbers){
-            integerArrayList.add(Integer.parseInt(numberString.trim()));
-        }
-        Collections.sort(integerArrayList);
-        return integerArrayList;
-    }
-
-    public void addAlerts() {
-        ArrayList<Alert> aAlerts = new ArrayList<>();
-        aAlerts.add(new Alert("06:30", "00:15", new ArrayList<Integer>() {{add(2); add(3); add(4); add(5);}}));
-        aAlerts.add(new Alert("12:00", "00:30", new ArrayList<Integer>() {{add(2); add(3);}}));
-        aAlerts.add(new Alert("18:30", "00:10", new ArrayList<Integer>() {{add(4); add(5); add(6);}}));
-
-        for (Alert cn : aAlerts) {
-            if (mDB.addAlert(cn) >= 0) {
-                oAlertListAdapter.addAlert(cn);
-            }
-        }
-    }
-
-    public void removeAlerts() {
-        //This will erase the DB content
-        if (sendDeleteAlerts()) {
-            mDB.deleteAll();
-            oAlertListAdapter.removeAll();
-        } else {
-            Toast.makeText(this, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
-        }
     }
 
     /**
@@ -433,6 +397,58 @@ public class AlertsActivity extends BaseActivity implements
         return super.onOptionsItemSelected(item);
     }
 
+    public void addAlerts() {
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        aAlerts.add(new Alert("06:30", "00:15", new ArrayList<Integer>() {{add(2); add(3); add(4); add(5);}}));
+        aAlerts.add(new Alert("12:00", "00:30", new ArrayList<Integer>() {{add(2); add(3);}}));
+        aAlerts.add(new Alert("18:30", "00:10", new ArrayList<Integer>() {{add(4); add(5); add(6);}}));
+
+        for (Alert cn : aAlerts) {
+            if (mDB.addAlert(cn) >= 0) {
+                oAlertListAdapter.addAlert(cn);
+            }
+        }
+    }
+
+    public void removeAlerts() {
+        //This will erase the DB content
+        if (true) { // || sendDeleteAlerts()
+            mDB.deleteAll();
+            oAlertListAdapter.removeAll();
+        } else {
+            Toast.makeText(this, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public boolean OnItemDeleted(int pos, final Alert oAlert) {
+        ArrayList<Alert> alAlerts = new ArrayList<Alert>();
+        alAlerts.add(oAlert);
+        //if ( sendDeleteAlerts(new ArrayList<Alert>() {{ add(oAlert); }}) ) {
+        if ( sendDeleteAlerts(alAlerts) ) {
+            return mDB.deleteAlert(oAlert);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public void OnAlertSaved(int pos, final Alert oAlert) {
+        if (oAlert.get_id() < 0) {
+            //Adding new alert to DB
+            if (mDB.addAlert(oAlert) >= 0)
+                oAlertListAdapter.addAlert(oAlert);
+
+        } else {
+            //update row at DB
+            if (mDB.updateAlert(oAlert))
+                oAlertListAdapter.updateAlert(oAlert);
+        }
+        //sendAlerts(new ArrayList<Alert>() {{ add(oAlert); }});
+    }
+
+
+
     private void sendAlerts() {
         sendAlerts(new ArrayList<Alert>());
     }
@@ -444,8 +460,7 @@ public class AlertsActivity extends BaseActivity implements
             alerts = mDB.getAllAlerts();
         }
 
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-        String requestPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
+        String requestPath = Application.loadServerPath();
 
         GsonBuilder builder = new GsonBuilder();
         builder.excludeFieldsWithoutExposeAnnotation();
@@ -468,6 +483,7 @@ public class AlertsActivity extends BaseActivity implements
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
+                        Toast.makeText(getParent(), "Success on Removing Alerts", Toast.LENGTH_LONG).show();
                         //ServerResponse serverResponse = makeServerResponse(response);
                         //master.addInventoryServerCallback(serverResponse);
                     }
@@ -476,14 +492,14 @@ public class AlertsActivity extends BaseActivity implements
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        //ServerResponse serverResponse = makeServerResponse(error);
+                        Toast.makeText(getParent(), "Error on Removing Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
         );
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
+        RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
@@ -501,8 +517,7 @@ public class AlertsActivity extends BaseActivity implements
             alerts = mDB.getAllAlerts();
         }
 
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-        String requestPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
+        String requestPath = Application.loadServerPath();
         final boolean[] bSuccess = {false};
 
         GsonBuilder builder = new GsonBuilder();
@@ -542,7 +557,7 @@ public class AlertsActivity extends BaseActivity implements
         );
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
+        RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
@@ -552,51 +567,5 @@ public class AlertsActivity extends BaseActivity implements
 
 
 
-    @Override
-    protected int getNavigationDrawerID() {
-        return R.id.nav_alerts;
-    }
 
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        outState.putParcelableArrayList(ALERT_LIST, oAlertListAdapter.items);
-        outState.putIntegerArrayList(ALERT_DELETE_LIST, oAlertListAdapter.itemsPendingRemoval);
-
-        super.onSaveInstanceState(outState);
-    }
-
-    // This callback is called only when there is a saved instance previously saved using
-    // onSaveInstanceState(). We restore some state in onCreate() while we can optionally restore
-    // other state here, possibly usable after onStart() has completed.
-    // The savedInstanceState Bundle is same as the one used in onCreate().
-    @Override
-    public void onRestoreInstanceState(Bundle savedInstanceState) {
-        oAlertListAdapter.items = savedInstanceState.getParcelableArrayList(ALERT_LIST);
-        oAlertListAdapter.itemsPendingRemoval = savedInstanceState.getIntegerArrayList(ALERT_DELETE_LIST);
-    }
-
-    @Override
-    public void OnAlertSaved(int pos, final Alert oAlert) {
-        if (oAlert.get_id() < 0) {
-            //Adding new alert to DB
-            if (mDB.addAlert(oAlert) >= 0)
-                oAlertListAdapter.addAlert(oAlert);
-
-        } else {
-            //update row at DB
-            if (mDB.updateAlert(oAlert))
-                oAlertListAdapter.updateAlert(oAlert);
-        }
-        sendAlerts(new ArrayList<Alert>() {{ add(oAlert); }});
-    }
-
-    @Override
-    public boolean OnItemDeleted(int pos, final Alert oAlert) {
-        if ( sendDeleteAlerts(new ArrayList<Alert>() {{ add(oAlert); }}) ) {
-            return mDB.deleteAlert(oAlert);
-        } else {
-            return false;
-        }
-    }
 }
