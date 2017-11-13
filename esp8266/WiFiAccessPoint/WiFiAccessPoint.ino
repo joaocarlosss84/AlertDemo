@@ -37,6 +37,11 @@
 #include <map>
 #include <list>
 
+extern "C" { 
+  #include<user_interface.h>
+}
+
+
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
 //using namespace std;
@@ -70,6 +75,11 @@ std::map<int, Alerts> AlertsMap;
 std::list<WeekAlert> WeekdaysList[8];
 
 ESP8266WebServer server(80);
+struct station_info *stat_info;
+struct ip_addr *IPaddress;
+IPAddress address;
+const char* headerkeys[20];
+size_t headerkeyssize;
 
 bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
@@ -82,9 +92,40 @@ void handleRoot() {
 	server.send(200, "text/html", "<h1>You are connected</h1>");
 }
 
+void returnFail(String msg) {
+  server.send(500, "text/plain", msg + "\r\n");
+}
+
+
 void handleDeleteAlerts() {
-  String ReqJson = server.arg("plain");
-  String message = "DELETE received:\n";
+
+    String message = "";
+    int i;
+     
+    for (i = 0; i < server.args(); i++) {    
+      message += "Arg num:" + (String)i + " –> ";
+      message += server.argName(i) + ": ";
+      message += server.arg(i) + "\n";      
+    } 
+
+    for (i = 0; i < server.headers(); i++) {    
+      message += "Header num:" + (String)i + " –> ";
+      message += server.headerName(i) + ": ";
+      message += server.header(i) + "\n";      
+    } 
+
+    Serial.println(message);
+ 
+  if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
+    //Check if body received
+    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");      
+    return; 
+  }
+
+  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );   
+    
+  
+  message = "DELETE received:\n";
          message += ReqJson;
          message += "\n";
   
@@ -93,7 +134,6 @@ void handleDeleteAlerts() {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
   JsonArray& alerts = _root["alerts"];     
-  int i;
   std::list<WeekAlert>::iterator wki;
   Alerts oAlert;
   
@@ -132,11 +172,11 @@ void handleDeleteAlerts() {
 
       //Now delete the alert from DB
       AlertsMap.erase( it );      
-      server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
+      server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
     } else {
       Serial.print("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
-      server.send ( 404, "application/json", "{\"Status\":\"Not Found\"}" );
+      server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
     }    
   }
 }
@@ -244,6 +284,19 @@ void handleNotFound() {
   //digitalWrite ( led, 0 );
 }
 
+void dumpClients() {
+  Serial.print(" Clients:\r\n");
+  stat_info = wifi_softap_get_station_info();
+  while (stat_info != NULL) {
+    IPaddress = &stat_info->ip;
+    address = IPaddress->addr;
+    Serial.print("\t");
+    Serial.print(address);
+    Serial.print("\r\n");
+    stat_info = STAILQ_NEXT(stat_info, next);
+  } 
+}
+
 void setup() {
 	delay(1000);
 	Serial.begin(115200);
@@ -252,11 +305,12 @@ void setup() {
   //digitalWrite ( led, 0 );
  
 	Serial.println();
-	Serial.print("Configuring access point:"  + String(ssid));
+	Serial.println("Configuring access point: "  + String(ssid) + " Password: " + String(password));
 	/* You can remove the password parameter if you want the AP to be open. */
   IPAddress Ip(192, 168, 1, 1);
   IPAddress NMask(255, 255, 255, 0);
-  
+
+  WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(Ip, Ip, NMask);
   
 	if (!WiFi.softAP(ssid, password)) {
@@ -284,6 +338,14 @@ void setup() {
   server.on("/alerts", HTTP_GET, handleDumpAlerts);
   server.on("/alerts", HTTP_POST, handleAlerts);
   server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
+
+  //here the list of headers to be recorded
+  const char * headerkeys[] = {"User-Agent","Cookie","plain"} ;
+  size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
+  //ask server to track these headers
+  server.collectHeaders(headerkeys, headerkeyssize );  
+  
+  
 	server.begin();
 	Serial.println("HTTP server started");
 }

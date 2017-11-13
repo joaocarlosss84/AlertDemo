@@ -15,13 +15,13 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -35,6 +35,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
@@ -363,13 +366,13 @@ public class BLEActivity extends BaseActivity implements
 
         // Get the SearchView and set the searchable configuration
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
-        if (searchView != null) {
+        //SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+        //if (searchView != null) {
             //TODO: NOT WORKING
             // Assumes current activity is the searchable activity
-            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-            searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
-        }
+        //    searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        //    searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
+        //}
         return true;
     }
 
@@ -539,15 +542,25 @@ public class BLEActivity extends BaseActivity implements
 
         final Activity oParent = this;
 
+        final JSONObject finalJson = json;
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.DELETE,
                 requestPath,
-                json,
+                finalJson,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        bSuccess[0] = true;
-                        Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status ? true : false);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0])
+                            Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                        else
+                            Toast.makeText(oParent, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 },
@@ -559,7 +572,23 @@ public class BLEActivity extends BaseActivity implements
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
-        );
+        ) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = super.getHeaders();
+
+                if (headers == null
+                        || headers.equals(Collections.emptyMap())) {
+                    headers = new HashMap<String, String>();
+                }
+
+                //headers.put("access_token", "access_token");
+                headers.put("plain", finalJson.toString());
+
+                return headers;
+            }
+
+        };
 
         // Instantiate the RequestQueue.
         RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
