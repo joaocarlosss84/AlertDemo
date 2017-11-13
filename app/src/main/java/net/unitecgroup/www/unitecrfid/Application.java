@@ -31,6 +31,8 @@ public class Application extends android.app.Application {
 
     private static DatabaseTable db;
 
+    private static boolean bUseAsEditor = false;
+
     //endregion
 
     @Override
@@ -115,8 +117,14 @@ public class Application extends android.app.Application {
         //SharedPreferences.Editor editor = sharedPreferences.edit();
         //String path = sharedPref.getString("server_path", "http://192.168.1.120/volley/request.php");
         String path = sharedPreferences.getString(SettingsActivity.SERVER_IP, "");
-
+        if (!path.startsWith("http://"))
+            path = "http://" + path;
         return path;
     }
 
+    public static void setUseAsEditorOnly(boolean bEditor) {
+        bUseAsEditor = bEditor;
+    }
+
+    public static boolean getUseAsEditorOnly() { return bUseAsEditor; }
 }
