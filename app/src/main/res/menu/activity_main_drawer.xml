@@ -10,12 +10,12 @@
             android:id="@+id/nav_alerts"
             android:icon="@android:drawable/ic_lock_idle_alarm"
             android:title="Alerts" />
-        <!--
+
         <item
-            android:id="@+id/nav_slideshow"
+            android:id="@+id/nav_ble"
             android:icon="@drawable/ic_menu_slideshow"
-            android:title="Slideshow" />
-        -->
+            android:title="BLE" />
+
         <item
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_menu_settings"

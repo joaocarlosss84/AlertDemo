@@ -150,17 +150,16 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
                 startActivity(intent);
                 break;
             case R.id.nav_alerts:
-                //intent = new Intent(this, AlertsActivity.class);
+                intent = new Intent(this, AlertsActivity.class);
+                createBackStack(intent);
+                break;
+
+            case R.id.nav_ble:
                 intent = new Intent(this, BLEActivity.class);
+                //intent.setAction(TutorialActivity.ACTION_SHOW_ANYWAYS);
                 createBackStack(intent);
                 break;
-            /*
-            case R.id.nav_slideshow:
-                intent = new Intent(this, TutorialActivity.class);
-                intent.setAction(TutorialActivity.ACTION_SHOW_ANYWAYS);
-                createBackStack(intent);
-                break;
-            */
+
             case R.id.nav_settings:
                 intent = new Intent(this, SettingsActivity.class);
                 intent.putExtra( PreferenceActivity.EXTRA_SHOW_FRAGMENT, SettingsActivity.GeneralPreferenceFragment.class.getName() );

@@ -7,6 +7,7 @@
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
 
     <application
+        android:name=".Application"
         android:allowBackup="true"
         android:icon="@drawable/ic_unitecsemilogo_vector"
         android:label="@string/app_name"
@@ -45,6 +46,15 @@
         <activity
             android:name=".AlertsActivity"
             android:label="Alerts"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
+            android:name=".BLEActivity"
+            android:label="BLE"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
