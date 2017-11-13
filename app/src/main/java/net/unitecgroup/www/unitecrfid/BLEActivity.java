@@ -1,5 +1,6 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -90,7 +91,7 @@ public class BLEActivity extends BaseActivity implements
         //mDB = new DatabaseManager(this);
         mDB = Application.getDatabase();
 
-        mDB.loadDictionary();
+        //mDB.loadDictionary();
 
         //Floating Action Button
         fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -118,7 +119,7 @@ public class BLEActivity extends BaseActivity implements
 
     @Override
     protected int getNavigationDrawerID() {
-        return R.id.nav_alerts;
+        return R.id.nav_ble;
     }
 
     private void setUpRecyclerView() {
@@ -476,6 +477,8 @@ public class BLEActivity extends BaseActivity implements
             e.printStackTrace();
         }
 
+        final Activity oParent = this;
+
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.POST,
                 requestPath,
@@ -483,7 +486,7 @@ public class BLEActivity extends BaseActivity implements
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        Toast.makeText(getParent(), "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                        Toast.makeText(oParent, "Success on Updating Alerts", Toast.LENGTH_LONG).show();
                         //ServerResponse serverResponse = makeServerResponse(response);
                         //master.addInventoryServerCallback(serverResponse);
                     }
@@ -492,7 +495,7 @@ public class BLEActivity extends BaseActivity implements
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getParent(), "Error on Removing Alerts", Toast.LENGTH_LONG).show();
+                        Toast.makeText(oParent, "Error on Updating Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
@@ -534,6 +537,8 @@ public class BLEActivity extends BaseActivity implements
             e.printStackTrace();
         }
 
+        final Activity oParent = this;
+
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.DELETE,
                 requestPath,
@@ -542,14 +547,14 @@ public class BLEActivity extends BaseActivity implements
                     @Override
                     public void onResponse(JSONObject response) {
                         bSuccess[0] = true;
-                        //ServerResponse serverResponse = makeServerResponse(response);
+                        Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 },
-
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
                         //ServerResponse serverResponse = makeServerResponse(error);
                         //master.addInventoryServerCallback(serverResponse);
                     }
