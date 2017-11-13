@@ -188,7 +188,7 @@ public class MainActivity extends BaseActivity {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 // Only use Editor.
-                                //Common.setUseAsEditorOnly(true);
+                                Application.setUseAsEditorOnly(true);
                             }
                         })
                 .setNegativeButton("Exit App",
@@ -302,7 +302,7 @@ public class MainActivity extends BaseActivity {
      */
     private void checkNfc() {
         // Check if the NFC hardware is enabled.
-        if (mNfcAdapter != null) {
+        if (mNfcAdapter != null && !Application.getUseAsEditorOnly()) {
             if (!mNfcAdapter.isEnabled()) {
                 // NFC is disabled.
                 createNfcEnableDialog();
