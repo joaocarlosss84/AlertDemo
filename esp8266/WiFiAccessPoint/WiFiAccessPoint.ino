@@ -26,8 +26,17 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * 
+ * 
+ * https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
+ * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
+ * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/FSBrowser/FSBrowser.ino
+ * 
+ * Get List of Connected Devices
+ * http://www.esp8266.com/viewtopic.php?p=30091
  */
-
+ 
 /* Create a WiFi access point and provide a web server on it. */
 
 #include <ESP8266WiFi.h>
@@ -103,13 +112,13 @@ void handleDeleteAlerts() {
     int i;
      
     for (i = 0; i < server.args(); i++) {    
-      message += "Arg num:" + (String)i + " –> ";
+      message += "Arg num:" + String(i) + " –> ";
       message += server.argName(i) + ": ";
       message += server.arg(i) + "\n";      
     } 
 
     for (i = 0; i < server.headers(); i++) {    
-      message += "Header num:" + (String)i + " –> ";
+      message += "Header num:" + String(i) + " –> ";
       message += server.headerName(i) + ": ";
       message += server.header(i) + "\n";      
     } 
@@ -226,9 +235,10 @@ void handleAlerts() {
     
     dumpWeekdaysList();
    
-    server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
+    server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
 }
 
+//Return all alerts at the database
 void handleDumpAlerts() {
   dumpAlertsMap();
   dumpWeekdaysList();
@@ -236,10 +246,10 @@ void handleDumpAlerts() {
   int i;
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  //root["sensor"] = "gps";
+  root["Status"] = 1;
   JsonArray& alerts = root.createNestedArray("alerts");
-  //alerts.add(48.756080);
-  
+
+  //iterates all DB and create the JSON Array for each alert as JSON Object
   for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
     Alerts oAlert = (*it).second;
     JsonObject& JsonAlert = jsonBuffer.createObject();
@@ -248,6 +258,7 @@ void handleDumpAlerts() {
     JsonAlert["_duration"] = oAlert.iDuration;
     JsonArray& JsonWeekdays = JsonAlert.createNestedArray("Weekdays");
 
+    //Parse the binary represetation of weekdays into an Array[interger]
     for (i = 0; i < 8; i++) {
       if (CHECK_BIT(oAlert.bWeekdays, i)) {        
         JsonWeekdays.add(i);
