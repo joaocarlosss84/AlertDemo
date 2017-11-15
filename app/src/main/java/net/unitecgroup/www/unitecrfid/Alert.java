@@ -58,12 +58,24 @@ public class Alert implements Parcelable {
         this._time = _time;
     }
 
+    public void set_time(int time) {
+        String hour = Integer.toString(time/60);
+        String minutes = Integer.toString(time%60);
+        this._time = hour + ":" + minutes;
+    }
+
     public String get_duration() {
         return _duration;
     }
 
     public void set_duration(String _duration) {
         this._duration = _duration;
+    }
+
+    public void set_duration(int duration) {
+        String hour = Integer.toString(duration/60);
+        String minutes = Integer.toString(duration%60);
+        this._duration = hour + ":" + minutes;
     }
 
     public ArrayList<Integer> get_weekdays() {

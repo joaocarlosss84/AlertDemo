@@ -19,7 +19,7 @@ import java.util.ArrayList;
  */
 
 class AlertListAdapter extends RecyclerView.Adapter {
-    private static final int PENDING_REMOVAL_TIMEOUT = 3000; // 3sec
+    private static final int PENDING_REMOVAL_TIMEOUT = 2000; // 3sec
 
     ArrayList<Alert> items;
     ArrayList<Integer> itemsPendingRemoval;
@@ -189,6 +189,22 @@ class AlertListAdapter extends RecyclerView.Adapter {
         if (bSuccess) {
             if (itemsPendingRemoval.contains(position)) {
                 itemsPendingRemoval.remove(itemsPendingRemoval.indexOf(position));
+            }
+
+            if (items.get(position) != null) {
+                items.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, items.size());
+            }
+        }
+    }
+
+    public void deleteAlert(Alert oAlert) {
+        int id = oAlert.get_id();
+        int position = getPositionForId(id);
+        if (position >= 0) {
+            if (itemsPendingRemoval.contains(id)) {
+                itemsPendingRemoval.remove(itemsPendingRemoval.indexOf(id));
             }
 
             if (items.get(position) != null) {

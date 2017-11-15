@@ -15,13 +15,13 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -35,6 +35,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
@@ -363,13 +366,13 @@ public class BLEActivity extends BaseActivity implements
 
         // Get the SearchView and set the searchable configuration
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
-        if (searchView != null) {
+        //SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+        //if (searchView != null) {
             //TODO: NOT WORKING
             // Assumes current activity is the searchable activity
-            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-            searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
-        }
+        //    searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        //    searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
+        //}
         return true;
     }
 
@@ -393,6 +396,9 @@ public class BLEActivity extends BaseActivity implements
         } else if (id == R.id.action_sendAlerts) {
             sendAlerts();
             return true;
+        } else if (id == R.id.action_getAlerts) {
+            getAlerts();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -409,11 +415,12 @@ public class BLEActivity extends BaseActivity implements
                 oAlertListAdapter.addAlert(cn);
             }
         }
+        sendAlerts(aAlerts);
     }
 
     public void removeAlerts() {
         //This will erase the DB content
-        if (true) { // || sendDeleteAlerts()
+        if (sendDeleteAlerts()) {
             mDB.deleteAll();
             oAlertListAdapter.removeAll();
         } else {
@@ -433,8 +440,19 @@ public class BLEActivity extends BaseActivity implements
         }
     }
 
+    public void returnDeleteAlerts(ArrayList<Alert> aAlerts) {
+        for (Alert oAlert : aAlerts) {
+            if (mDB.deleteAlert(oAlert)) {
+                oAlertListAdapter.deleteAlert(oAlert);
+            }
+        }
+    }
+
     @Override
     public void OnAlertSaved(int pos, final Alert oAlert) {
+        ArrayList<Alert> alAlerts = new ArrayList<Alert>();
+        alAlerts.add(oAlert);
+
         if (oAlert.get_id() < 0) {
             //Adding new alert to DB
             if (mDB.addAlert(oAlert) >= 0)
@@ -445,16 +463,94 @@ public class BLEActivity extends BaseActivity implements
             if (mDB.updateAlert(oAlert))
                 oAlertListAdapter.updateAlert(oAlert);
         }
-        //sendAlerts(new ArrayList<Alert>() {{ add(oAlert); }});
+        sendAlerts(alAlerts);
+    }
+
+    private void callbackGetAlerts(JSONArray aJSAlerts) {
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        for (int i = 0; i < aJSAlerts.length(); i++) {
+            try {
+                JSONObject JSAlert = aJSAlerts.getJSONObject(i);
+                Alert oAlert = new Alert();
+                oAlert.set_id(JSAlert.getInt("_id"));
+                oAlert.set_time(JSAlert.getInt("_time"));
+                oAlert.set_duration(JSAlert.getInt("_duration"));
+
+                ArrayList<Integer> aWeekdays = new ArrayList<>();
+                JSONArray aJSWeekdays = JSAlert.getJSONArray("Weekdays");
+                for (int j = 0; j < aJSWeekdays.length(); j++) {
+                    aWeekdays.add(aJSWeekdays.getInt(j));
+                }
+                oAlert.set_weekdays(aWeekdays);
+
+                aAlerts.add(oAlert);
+                //Gson gson = new Gson();
+                //Alert oAlert = (Alert) gson.fromJson(JSAlert, Alert.class);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        oAlertListAdapter.items = aAlerts;
+        oAlertListAdapter.notifyDataSetChanged();
+
+    }
+
+    private void getAlerts() {
+        String requestPath = Application.loadServerPath();
+        final Activity oParent = this;
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                            if (Status == 1) {
+                                JSONArray aJSAlerts = response.getJSONArray("alerts");
+                                callbackGetAlerts(aJSAlerts);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success on Loading Alerts", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "No Alerts to be loaded", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
     }
 
 
-
-    private void sendAlerts() {
-        sendAlerts(new ArrayList<Alert>());
+    private boolean sendAlerts() {
+        return sendAlerts(new ArrayList<Alert>());
     }
 
-    private void sendAlerts(ArrayList<Alert> alerts) {
+    private boolean sendAlerts(ArrayList<Alert> alerts) {
+
+        final boolean[] bSuccess = {false};
+
         // Reading all contacts
         //ArrayList<Alert> alerts = mDB.getAllAlerts();
         if (alerts.size() == 0) {
@@ -486,7 +582,19 @@ public class BLEActivity extends BaseActivity implements
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        Toast.makeText(oParent, "Success on Updating Alerts", Toast.LENGTH_LONG).show();
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success on Updating Alerts", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error on Updating Alerts", Toast.LENGTH_LONG).show();
+                        }
+
                         //ServerResponse serverResponse = makeServerResponse(response);
                         //master.addInventoryServerCallback(serverResponse);
                     }
@@ -507,6 +615,7 @@ public class BLEActivity extends BaseActivity implements
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
 
+        return bSuccess[0];
     }
 
     private boolean sendDeleteAlerts() {
@@ -539,15 +648,29 @@ public class BLEActivity extends BaseActivity implements
 
         final Activity oParent = this;
 
+        final JSONObject finalJson = json;
+        final ArrayList<Alert> finalAlerts = alerts;
+
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.DELETE,
                 requestPath,
-                json,
+                finalJson,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        bSuccess[0] = true;
-                        Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                            returnDeleteAlerts(finalAlerts);
+                        } else {
+                            Toast.makeText(oParent, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
+                        }
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 },
@@ -559,7 +682,23 @@ public class BLEActivity extends BaseActivity implements
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
-        );
+        ) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = super.getHeaders();
+
+                if (headers == null
+                        || headers.equals(Collections.emptyMap())) {
+                    headers = new HashMap<String, String>();
+                }
+
+                //headers.put("access_token", "access_token");
+                headers.put("plain", finalJson.toString());
+
+                return headers;
+            }
+
+        };
 
         // Instantiate the RequestQueue.
         RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);

@@ -26,8 +26,17 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * 
+ * 
+ * https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
+ * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
+ * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/FSBrowser/FSBrowser.ino
+ * 
+ * Get List of Connected Devices
+ * http://www.esp8266.com/viewtopic.php?p=30091
  */
-
+ 
 /* Create a WiFi access point and provide a web server on it. */
 
 #include <ESP8266WiFi.h>
@@ -36,6 +45,11 @@
 #include <ArduinoJson.h>
 #include <map>
 #include <list>
+
+extern "C" { 
+  #include<user_interface.h>
+}
+
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
@@ -70,6 +84,11 @@ std::map<int, Alerts> AlertsMap;
 std::list<WeekAlert> WeekdaysList[8];
 
 ESP8266WebServer server(80);
+struct station_info *stat_info;
+struct ip_addr *IPaddress;
+IPAddress address;
+const char* headerkeys[20];
+size_t headerkeyssize;
 
 bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
@@ -82,9 +101,40 @@ void handleRoot() {
 	server.send(200, "text/html", "<h1>You are connected</h1>");
 }
 
+void returnFail(String msg) {
+  server.send(500, "text/plain", msg + "\r\n");
+}
+
+
 void handleDeleteAlerts() {
-  String ReqJson = server.arg("plain");
-  String message = "DELETE received:\n";
+
+    String message = "";
+    int i;
+     
+    for (i = 0; i < server.args(); i++) {    
+      message += "Arg num:" + String(i) + " –> ";
+      message += server.argName(i) + ": ";
+      message += server.arg(i) + "\n";      
+    } 
+
+    for (i = 0; i < server.headers(); i++) {    
+      message += "Header num:" + String(i) + " –> ";
+      message += server.headerName(i) + ": ";
+      message += server.header(i) + "\n";      
+    } 
+
+    Serial.println(message);
+ 
+  if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
+    //Check if body received
+    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");      
+    return; 
+  }
+
+  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );   
+    
+  
+  message = "DELETE received:\n";
          message += ReqJson;
          message += "\n";
   
@@ -93,7 +143,6 @@ void handleDeleteAlerts() {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
   JsonArray& alerts = _root["alerts"];     
-  int i;
   std::list<WeekAlert>::iterator wki;
   Alerts oAlert;
   
@@ -132,11 +181,11 @@ void handleDeleteAlerts() {
 
       //Now delete the alert from DB
       AlertsMap.erase( it );      
-      server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
+      server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
     } else {
       Serial.print("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
-      server.send ( 404, "application/json", "{\"Status\":\"Not Found\"}" );
+      server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
     }    
   }
 }
@@ -189,9 +238,10 @@ void handleAlerts() {
     
     dumpWeekdaysList();
    
-    server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
+    server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
 }
 
+//Return all alerts at the database
 void handleDumpAlerts() {
   dumpAlertsMap();
   dumpWeekdaysList();
@@ -199,10 +249,10 @@ void handleDumpAlerts() {
   int i;
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  //root["sensor"] = "gps";
+  root["Status"] = 1;
   JsonArray& alerts = root.createNestedArray("alerts");
-  //alerts.add(48.756080);
-  
+
+  //iterates all DB and create the JSON Array for each alert as JSON Object
   for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
     Alerts oAlert = (*it).second;
     JsonObject& JsonAlert = jsonBuffer.createObject();
@@ -211,6 +261,7 @@ void handleDumpAlerts() {
     JsonAlert["_duration"] = oAlert.iDuration;
     JsonArray& JsonWeekdays = JsonAlert.createNestedArray("Weekdays");
 
+    //Parse the binary represetation of weekdays into an Array[interger]
     for (i = 0; i < 8; i++) {
       if (CHECK_BIT(oAlert.bWeekdays, i)) {        
         JsonWeekdays.add(i);
@@ -247,6 +298,19 @@ void handleNotFound() {
   //digitalWrite ( led, 0 );
 }
 
+void dumpClients() {
+  Serial.print(" Clients:\r\n");
+  stat_info = wifi_softap_get_station_info();
+  while (stat_info != NULL) {
+    IPaddress = &stat_info->ip;
+    address = IPaddress->addr;
+    Serial.print("\t");
+    Serial.print(address);
+    Serial.print("\r\n");
+    stat_info = STAILQ_NEXT(stat_info, next);
+  } 
+}
+
 void setup() {
 	delay(1000);
 	Serial.begin(115200);
@@ -255,11 +319,12 @@ void setup() {
   //digitalWrite ( led, 0 );
  
 	Serial.println();
-	Serial.print("Configuring access point:"  + String(ssid));
+	Serial.println("Configuring access point: "  + String(ssid) + " Password: " + String(password));
 	/* You can remove the password parameter if you want the AP to be open. */
   IPAddress Ip(192, 168, 1, 1);
   IPAddress NMask(255, 255, 255, 0);
-  
+
+  WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(Ip, Ip, NMask);
   
 	if (!WiFi.softAP(ssid, password)) {
@@ -287,6 +352,14 @@ void setup() {
   server.on("/alerts", HTTP_GET, handleDumpAlerts);
   server.on("/alerts", HTTP_POST, handleAlerts);
   server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
+
+  //here the list of headers to be recorded
+  const char * headerkeys[] = {"User-Agent","Cookie","plain"} ;
+  size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
+  //ask server to track these headers
+  server.collectHeaders(headerkeys, headerkeyssize );  
+  
+  
 	server.begin();
 	Serial.println("HTTP server started");
 }

@@ -2,7 +2,6 @@ package net.unitecgroup.www.unitecrfid;
 
 import android.app.SearchManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -10,13 +9,11 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,7 +25,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -118,12 +114,6 @@ public class AlertsActivity extends BaseActivity implements
         oAlertListAdapter.items = mDB.getAllAlerts();
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        //mDB.close();
-    }
-
     private void setUpRecyclerView() {
 
         oAlertListAdapter.setUndoOn(true);
@@ -187,7 +177,8 @@ public class AlertsActivity extends BaseActivity implements
 
     public void removeAlerts() {
         //This will erase the DB content
-        if (sendDeleteAlerts()) {
+        //if (sendDeleteAlerts()) {
+        if (true) {
             mDB.deleteAll();
             oAlertListAdapter.removeAll();
         } else {
@@ -398,13 +389,14 @@ public class AlertsActivity extends BaseActivity implements
 
         // Get the SearchView and set the searchable configuration
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
-        if (searchView != null) {
-            //TODO: NOT WORKING
+        //TODO: NOT WORKING
+
+        //SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+        //if (searchView != null) {
             // Assumes current activity is the searchable activity
-            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-            searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
-        }
+        //    searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        //    searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
+        //}
         return true;
     }
 
@@ -444,8 +436,7 @@ public class AlertsActivity extends BaseActivity implements
             alerts = mDB.getAllAlerts();
         }
 
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-        String requestPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
+        String requestPath = Application.loadServerPath();
 
         GsonBuilder builder = new GsonBuilder();
         builder.excludeFieldsWithoutExposeAnnotation();
@@ -483,7 +474,7 @@ public class AlertsActivity extends BaseActivity implements
         );
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
+        RequestQueue queue = Application.getVolleyRequestQueue();
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
@@ -501,8 +492,7 @@ public class AlertsActivity extends BaseActivity implements
             alerts = mDB.getAllAlerts();
         }
 
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-        String requestPath = sharedPref.getString(SettingsActivity.SERVER_IP, "");
+        String requestPath = Application.loadServerPath();
         final boolean[] bSuccess = {false};
 
         GsonBuilder builder = new GsonBuilder();
@@ -542,7 +532,7 @@ public class AlertsActivity extends BaseActivity implements
         );
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
+        RequestQueue queue = Application.getVolleyRequestQueue();
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
@@ -578,6 +568,9 @@ public class AlertsActivity extends BaseActivity implements
 
     @Override
     public void OnAlertSaved(int pos, final Alert oAlert) {
+        ArrayList<Alert> alAlerts = new ArrayList<Alert>();
+        alAlerts.add(oAlert);
+
         if (oAlert.get_id() < 0) {
             //Adding new alert to DB
             if (mDB.addAlert(oAlert) >= 0)
@@ -588,15 +581,24 @@ public class AlertsActivity extends BaseActivity implements
             if (mDB.updateAlert(oAlert))
                 oAlertListAdapter.updateAlert(oAlert);
         }
-        sendAlerts(new ArrayList<Alert>() {{ add(oAlert); }});
+        sendAlerts(alAlerts);
     }
 
     @Override
     public boolean OnItemDeleted(int pos, final Alert oAlert) {
-        if ( sendDeleteAlerts(new ArrayList<Alert>() {{ add(oAlert); }}) ) {
+        //WRONG: for some reason the Activity get stuck if I use this code
+        //if ( sendDeleteAlerts(new ArrayList<Alert>() {{ add(oAlert); }}) ) {
+        //  return mDB.deleteAlert(oAlert);
+        //}
+
+        //RIGHT: this fixed the Activity to be frozen
+        ArrayList<Alert> alAlerts = new ArrayList<Alert>();
+        alAlerts.add(oAlert);
+        if ( sendDeleteAlerts(alAlerts)) {
             return mDB.deleteAlert(oAlert);
         } else {
             return false;
         }
     }
 }
+
