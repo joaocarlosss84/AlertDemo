@@ -26,17 +26,17 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
- * 
+ *
+ *
+ *
  * https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/FSBrowser/FSBrowser.ino
- * 
+ *
  * Get List of Connected Devices
  * http://www.esp8266.com/viewtopic.php?p=30091
  */
- 
+
 /* Create a WiFi access point and provide a web server on it. */
 
 #include <ESP8266WiFi.h>
@@ -46,7 +46,7 @@
 #include <map>
 #include <list>
 
-extern "C" { 
+extern "C" {
   #include<user_interface.h>
 }
 
@@ -110,30 +110,30 @@ void handleDeleteAlerts() {
 
     String message = "";
     int i;
-     
-    for (i = 0; i < server.args(); i++) {    
+
+    for (i = 0; i < server.args(); i++) {
       message += "Arg num:" + String(i) + " –> ";
       message += server.argName(i) + ": ";
-      message += server.arg(i) + "\n";      
-    } 
+      message += server.arg(i) + "\n";
+    }
 
-    for (i = 0; i < server.headers(); i++) {    
+    for (i = 0; i < server.headers(); i++) {
       message += "Header num:" + String(i) + " –> ";
       message += server.headerName(i) + ": ";
-      message += server.header(i) + "\n";      
-    } 
+      message += server.header(i) + "\n";
+    }
 
     Serial.println(message);
- 
+
   if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
     //Check if body received
-    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");      
-    return; 
+    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");
+    return;
   }
 
-  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );   
-    
-  
+  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );
+
+
   message = "DELETE received:\n";
          message += ReqJson;
          message += "\n";
@@ -142,7 +142,7 @@ void handleDeleteAlerts() {
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
-  JsonArray& alerts = _root["alerts"];     
+  JsonArray& alerts = _root["alerts"];
   std::list<WeekAlert>::iterator wki;
   Alerts oAlert;
   
@@ -184,7 +184,7 @@ void handleDeleteAlerts() {
       server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
     } else {
-      Serial.print("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
+      Serial.println("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
       server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
     }    
   }
@@ -308,7 +308,7 @@ void dumpClients() {
     Serial.print(address);
     Serial.print("\r\n");
     stat_info = STAILQ_NEXT(stat_info, next);
-  } 
+  }
 }
 
 void setup() {
@@ -357,9 +357,9 @@ void setup() {
   const char * headerkeys[] = {"User-Agent","Cookie","plain"} ;
   size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
   //ask server to track these headers
-  server.collectHeaders(headerkeys, headerkeyssize );  
-  
-  
+  server.collectHeaders(headerkeys, headerkeyssize );
+
+
 	server.begin();
 	Serial.println("HTTP server started");
 }
