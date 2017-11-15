@@ -59,9 +59,9 @@ public class Alert implements Parcelable {
     }
 
     public void set_time(int time) {
-        String hour = Integer.toString(time/60);
-        String minutes = Integer.toString(time%60);
-        this._time = hour + ":" + minutes;
+        int hour = (time/60);
+        int minutes = (time%60);
+        this._time = String.format("%1$02d:%2$02d", hour, minutes);
     }
 
     public String get_duration() {
@@ -73,9 +73,9 @@ public class Alert implements Parcelable {
     }
 
     public void set_duration(int duration) {
-        String hour = Integer.toString(duration/60);
-        String minutes = Integer.toString(duration%60);
-        this._duration = hour + ":" + minutes;
+        int hour = (duration/60);
+        int minutes = (duration%60);
+        this._duration = String.format("%1$02d:%2$02d", hour, minutes);
     }
 
     public ArrayList<Integer> get_weekdays() {
