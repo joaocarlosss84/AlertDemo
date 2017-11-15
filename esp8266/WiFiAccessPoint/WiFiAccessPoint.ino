@@ -170,6 +170,9 @@ void handleAlerts() {
           if (CHECK_BIT(oAlert.bWeekdays, i)) {
             //Check if it exists and update if necessary, add it otherwise
             WeekdaysListInsert(WeekdaysList[i], WeekAlert(oAlert.iId, oAlert.iTime));
+          } else {
+            //Check if it exists and remove it if necessary
+            WeekdaysListRemove(WeekdaysList[i], WeekAlert(oAlert.iId, oAlert.iTime));
           }
         }
     }

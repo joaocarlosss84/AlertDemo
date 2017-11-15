@@ -17,7 +17,10 @@ String convertTime(int iTime) {
   int iHour, iMin, i;
   iHour = iTime/60;
   iMin = iTime%60;
-  return String(iHour) + ":" + String(iMin);
+  char cTime[6];  //buffer used to format a line (+1 is for trailing 0)
+  sprintf(cTime,"%02d:%02d",iHour, iMin);   
+
+  return String(cTime);
 }
 
 void dumpAlertsMap() {
@@ -82,13 +85,15 @@ Alerts parseAlertJson(JsonObject& alert) {
   
   //Parsing string time HH:MM to integer
   sTime = alert["_time"].as<char*>();
-  iHour = sTime.substring(0,2).toInt();
-  iMin = sTime.substring(3).toInt();
+  iHour = sTime.substring(0,sTime.indexOf(":")).toInt();
+  iMin = sTime.substring(sTime.indexOf(":")+1).toInt();
   iTime = iHour*60 + iMin;        
   
   sTime = alert["_duration"].as<char*>();
-  iHour = sTime.substring(0,2).toInt();
-  iMin = sTime.substring(3).toInt();
+  //iHour = sTime.substring(0,2).toInt();
+  //iMin = sTime.substring(3).toInt();
+  iHour = sTime.substring(0,sTime.indexOf(":")).toInt();
+  iMin = sTime.substring(sTime.indexOf(":")+1).toInt();
   iDuration = iHour*60 + iMin;        
           
   //Copying the weekdays int[]
@@ -123,5 +128,19 @@ void WeekdaysListInsert(std::list<WeekAlert> &oList, WeekAlert oWeekAlert) {
   }
   //not found, add new item
   oList.push_back(oWeekAlert);
+}
+
+void WeekdaysListRemove(std::list<WeekAlert> &oList, WeekAlert oWeekAlert) {
+  std::list<WeekAlert>::iterator wki;
+
+  wki = oList.begin();
+  while (wki != oList.end()) {
+    if ( (*wki).iId == oWeekAlert.iId) {
+      //remove it and get out of here
+      wki = oList.erase(wki);      
+      return;
+    }
+    ++wki;
+  }  
 }
 
