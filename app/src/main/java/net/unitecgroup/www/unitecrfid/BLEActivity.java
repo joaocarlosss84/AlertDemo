@@ -420,12 +420,10 @@ public class BLEActivity extends BaseActivity implements
 
     public void removeAlerts() {
         //This will erase the DB content
-        if (sendDeleteAlerts()) {
-            mDB.deleteAll();
-            oAlertListAdapter.removeAll();
-        } else {
-            Toast.makeText(this, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
-        }
+        //TODO: Sync Deletion with Volley
+        sendDeleteAlerts();
+        mDB.deleteAll();
+        oAlertListAdapter.removeAll();
     }
 
     @Override
