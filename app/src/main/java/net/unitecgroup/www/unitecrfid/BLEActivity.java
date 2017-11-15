@@ -58,13 +58,7 @@ public class BLEActivity extends BaseActivity implements
     AddAlertDialog oAddAlert;
     FragmentManager fm;
     FloatingActionButton fab;
-
-    @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-
-        oAlertListAdapter.items = mDB.getAllAlerts();
-    }
+    Boolean bOffline = false;
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -107,7 +101,10 @@ public class BLEActivity extends BaseActivity implements
         });
 
 
-        ArrayList<Alert> alerts = new ArrayList<>();
+        ArrayList<Alert> alerts = mDB.getAllAlerts();
+
+        //get alerts from server too
+        getAlerts();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.mainListView);
 
