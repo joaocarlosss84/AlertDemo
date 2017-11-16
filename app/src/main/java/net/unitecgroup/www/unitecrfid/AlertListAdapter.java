@@ -79,6 +79,24 @@ class AlertListAdapter extends RecyclerView.Adapter {
         return new AlertListHolder(parent);
     }
 
+    public void cancelDelete(Alert oAlert) {
+        int id = oAlert.get_id();
+        int iNewPos = getPositionForId(id);
+
+        // user wants to undo the removal, let's cancel the pending task
+        Runnable pendingRemovalRunnable = pendingRunnables.get(id);
+        if (pendingRemovalRunnable != null) {
+            pendingRunnables.remove(id);
+            handler.removeCallbacks(pendingRemovalRunnable);
+        }
+        int iPendingPos = itemsPendingRemoval.indexOf(id);
+        if (iPendingPos >= 0) {
+            itemsPendingRemoval.remove(iPendingPos);
+            // this will rebind the row in "normal" state
+            notifyItemChanged(iNewPos);
+        }
+    }
+
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         AlertListHolder viewHolder = (AlertListHolder)holder;

@@ -192,7 +192,7 @@ public class DatabaseTable extends SQLiteOpenHelper {
                         c.getColumnIndexOrThrow(AlertEntry._ID)
                 );
 
-                ArrayList<Integer> weekdays = AlertsActivity.arrayStringToIntegerArrayList(c.getString(3));
+                ArrayList<Integer> weekdays = arrayStringToIntegerArrayList(c.getString(3));
 
                 alert = new Alert(itemId,
                         c.getString(1), c.getString(2), weekdays);

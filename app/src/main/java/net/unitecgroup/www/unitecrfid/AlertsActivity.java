@@ -1,5 +1,6 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -20,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -34,6 +36,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
 import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_ID;
@@ -97,8 +101,7 @@ public class AlertsActivity extends BaseActivity implements
         //mServer = new ServerCommunication(this);
 
         // Reading all contacts
-        //ArrayList<Alert> alerts = mDB.getAllAlerts();
-        ArrayList<Alert> alerts = new ArrayList<>();
+        ArrayList<Alert> alerts = mDB.getAllAlerts();
 
         //Do not create more than one Adapter to avoid problems with screen rotation
         if (oAlertListAdapter == null)
@@ -106,12 +109,6 @@ public class AlertsActivity extends BaseActivity implements
 
         setUpRecyclerView();
 
-    }
-
-    @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-        oAlertListAdapter.items = mDB.getAllAlerts();
     }
 
     private void setUpRecyclerView() {
@@ -150,18 +147,6 @@ public class AlertsActivity extends BaseActivity implements
         setUpAnimationDecoratorHelper();
     }
 
-    //Creates a ArrayList<Integer> from String "[1,2,3]"
-    public static ArrayList<Integer> arrayStringToIntegerArrayList(String arrayString){
-        String removedBrackets = arrayString.substring(1, arrayString.length() - 1);
-        String[] individualNumbers = removedBrackets.split(",");
-        ArrayList<Integer> integerArrayList = new ArrayList<>();
-        for(String numberString : individualNumbers){
-            integerArrayList.add(Integer.parseInt(numberString.trim()));
-        }
-        Collections.sort(integerArrayList);
-        return integerArrayList;
-    }
-
     public void addAlerts() {
         ArrayList<Alert> aAlerts = new ArrayList<>();
         aAlerts.add(new Alert("06:30", "00:15", new ArrayList<Integer>() {{add(2); add(3); add(4); add(5);}}));
@@ -177,13 +162,9 @@ public class AlertsActivity extends BaseActivity implements
 
     public void removeAlerts() {
         //This will erase the DB content
-        //if (sendDeleteAlerts()) {
-        if (true) {
-            mDB.deleteAll();
-            oAlertListAdapter.removeAll();
-        } else {
-            Toast.makeText(this, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
-        }
+        sendDeleteAlerts();
+        mDB.deleteAll();
+        oAlertListAdapter.removeAll();
     }
 
     /**
@@ -420,16 +401,98 @@ public class AlertsActivity extends BaseActivity implements
         } else if (id == R.id.action_sendAlerts) {
             sendAlerts();
             return true;
+        } else if (id == R.id.action_getAlerts) {
+            getAlerts();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    private void sendAlerts() {
-        sendAlerts(new ArrayList<Alert>());
+    private void callbackGetAlerts(JSONArray aJSAlerts) {
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        for (int i = 0; i < aJSAlerts.length(); i++) {
+            try {
+                JSONObject JSAlert = aJSAlerts.getJSONObject(i);
+                Alert oAlert = new Alert();
+                oAlert.set_id(JSAlert.getInt("_id"));
+                oAlert.set_time(JSAlert.getInt("_time"));
+                oAlert.set_duration(JSAlert.getInt("_duration"));
+
+                ArrayList<Integer> aWeekdays = new ArrayList<>();
+                JSONArray aJSWeekdays = JSAlert.getJSONArray("Weekdays");
+                for (int j = 0; j < aJSWeekdays.length(); j++) {
+                    aWeekdays.add(aJSWeekdays.getInt(j));
+                }
+                oAlert.set_weekdays(aWeekdays);
+
+                aAlerts.add(oAlert);
+                //Gson gson = new Gson();
+                //Alert oAlert = (Alert) gson.fromJson(JSAlert, Alert.class);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        oAlertListAdapter.items = aAlerts;
+        oAlertListAdapter.notifyDataSetChanged();
+
     }
 
-    private void sendAlerts(ArrayList<Alert> alerts) {
+    private void getAlerts() {
+        String requestPath = Application.loadServerPath();
+        final Activity oParent = this;
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                            if (Status == 1) {
+                                JSONArray aJSAlerts = response.getJSONArray("alerts");
+                                callbackGetAlerts(aJSAlerts);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success on Loading Alerts", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "No Alerts to be loaded", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+    }
+
+    private boolean sendAlerts() {
+        return sendAlerts(new ArrayList<Alert>());
+    }
+
+    private boolean sendAlerts(ArrayList<Alert> alerts) {
+
+        final boolean[] bSuccess = {false};
+
         // Reading all contacts
         //ArrayList<Alert> alerts = mDB.getAllAlerts();
         if (alerts.size() == 0) {
@@ -452,6 +515,8 @@ public class AlertsActivity extends BaseActivity implements
             e.printStackTrace();
         }
 
+        final Activity oParent = this;
+
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.POST,
                 requestPath,
@@ -459,6 +524,19 @@ public class AlertsActivity extends BaseActivity implements
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success on Updating Alerts", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error on Updating Alerts", Toast.LENGTH_LONG).show();
+                        }
+
                         //ServerResponse serverResponse = makeServerResponse(response);
                         //master.addInventoryServerCallback(serverResponse);
                     }
@@ -467,18 +545,31 @@ public class AlertsActivity extends BaseActivity implements
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        //ServerResponse serverResponse = makeServerResponse(error);
+                        Toast.makeText(oParent, "Error on Updating Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
         );
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Application.getVolleyRequestQueue();
+        RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
 
+        return bSuccess[0];
+    }
+
+    public void returnDeleteAlerts(ArrayList<Alert> aAlerts, boolean bSucess) {
+        for (Alert oAlert : aAlerts) {
+            if (bSucess) {
+                if (mDB.deleteAlert(oAlert)) {
+                    oAlertListAdapter.deleteAlert(oAlert);
+                }
+            } else {
+                oAlertListAdapter.cancelDelete(oAlert);
+            }
+        }
     }
 
     private boolean sendDeleteAlerts() {
@@ -509,30 +600,64 @@ public class AlertsActivity extends BaseActivity implements
             e.printStackTrace();
         }
 
+        final Activity oParent = this;
+
+        final JSONObject finalJson = json;
+        final ArrayList<Alert> finalAlerts = alerts;
+
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.DELETE,
                 requestPath,
-                json,
+                finalJson,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        bSuccess[0] = true;
-                        //ServerResponse serverResponse = makeServerResponse(response);
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success on Removing Alerts", Toast.LENGTH_LONG).show();
+                            returnDeleteAlerts(finalAlerts, true);
+                        } else {
+                            Toast.makeText(oParent, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
+                            returnDeleteAlerts(finalAlerts, false);
+                        }
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 },
-
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Removing Alerts", Toast.LENGTH_LONG).show();
+                        returnDeleteAlerts(finalAlerts, false);
                         //ServerResponse serverResponse = makeServerResponse(error);
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
-        );
+        ) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = super.getHeaders();
+
+                if (headers == null
+                        || headers.equals(Collections.emptyMap())) {
+                    headers = new HashMap<String, String>();
+                }
+
+                //headers.put("access_token", "access_token");
+                headers.put("plain", finalJson.toString());
+
+                return headers;
+            }
+
+        };
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Application.getVolleyRequestQueue();
+        RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
 
         // Add the request to the RequestQueue.
         queue.add(JsonRequest);
