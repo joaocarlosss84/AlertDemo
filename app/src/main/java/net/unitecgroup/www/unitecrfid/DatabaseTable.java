@@ -132,21 +132,26 @@ public class DatabaseTable extends SQLiteOpenHelper {
     public long addAlert(Alert alert) {
         // Gets the data repository in write mode
         SQLiteDatabase db = this.getWritableDatabase();
+        // Insert the new row, returning the primary key value of the new row
+        long id = -1;
 
         // Create a new map of values, where column names are the keys
         ContentValues initialValues = new ContentValues();
         initialValues.put(AlertEntry.COL_TIME, alert.get_time());
         initialValues.put(AlertEntry.COL_DURATION, alert.get_duration());
         initialValues.put(AlertEntry.COL_WEEKDAYS, alert.get_weekdays().toString());
+        if (alert.get_id() > 0) {
+            id = alert.get_id();
+            initialValues.put(AlertEntry._ID, alert.get_id());
+        }
 
-        // Insert the new row, returning the primary key value of the new row
-        long id = -1;
         try {
             id = db.insert(AlertEntry.TABLE_NAME, null, initialValues);
             alert.set_id((int) id);
         } finally {
             //db.close();
         }
+
 
         return id;
     }

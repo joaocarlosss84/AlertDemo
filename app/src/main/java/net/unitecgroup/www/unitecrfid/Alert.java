@@ -26,7 +26,7 @@ public class Alert implements Parcelable {
     private ArrayList<Integer> _weekdays;
 
     public Alert() {
-
+        this._id = -1;
     }
 
     public Alert(int id, String time, String duration, ArrayList<Integer> weekdays) {
@@ -37,6 +37,7 @@ public class Alert implements Parcelable {
     }
 
     public Alert(String time, String duration, ArrayList<Integer> weekdays) {
+        this._id = -1;
         this._time = time;
         this._duration = duration;
         this._weekdays = weekdays;
