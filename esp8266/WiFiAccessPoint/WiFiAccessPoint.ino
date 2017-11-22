@@ -26,17 +26,17 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- *
- *
+ * 
+ * 
+ * 
  * https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/FSBrowser/FSBrowser.ino
- *
+ * 
  * Get List of Connected Devices
  * http://www.esp8266.com/viewtopic.php?p=30091
  */
-
+ 
 /* Create a WiFi access point and provide a web server on it. */
 
 #include <ESP8266WiFi.h>
@@ -46,7 +46,7 @@
 #include <map>
 #include <list>
 
-extern "C" {
+extern "C" { 
   #include<user_interface.h>
 }
 
@@ -56,8 +56,19 @@ extern "C" {
 //using namespace std;
 
 /* Set these to your desired credentials. */
-const char *ssid = "UnitecDemoServer";
-const char *password = "unitec2017";
+const char *ssidAP = "UnitecDemoServer";
+const char *pwdAP = "unitec2017";
+
+const char *ssidSTA = "UNITEC_VISITANTES";
+const char *pwdSTA = "Bem-vindo!"; 
+
+//const char *ssidSTA = "UNITEC_USUARIOS";
+//const char *pwdSTA = "#4tva82015"; 
+
+//const char *ssidSTA = "JCSSAP";
+//const char *pwdSTA = "jcss8469"; 
+
+
 const int led = 2;
 
 struct Alerts {
@@ -84,11 +95,11 @@ std::map<int, Alerts> AlertsMap;
 std::list<WeekAlert> WeekdaysList[8];
 
 ESP8266WebServer server(80);
-struct station_info *stat_info;
-struct ip_addr *IPaddress;
-IPAddress address;
-const char* headerkeys[20];
-size_t headerkeyssize;
+boolean bAP_Running = false;
+boolean bSAT_Running = false;
+/* You can remove the password parameter if you want the AP to be open. */
+IPAddress mySTA_IP(192, 168, 1, 1); //default value
+
 
 bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
@@ -112,28 +123,28 @@ void handleDeleteAlerts() {
     int i;
 
     for (i = 0; i < server.args(); i++) {
-      message += "Arg num:" + String(i) + " –> ";
+      message += "Arg num:" + String(i) + " -> ";
       message += server.argName(i) + ": ";
-      message += server.arg(i) + "\n";
-    }
+      message += server.arg(i) + "\n";      
+    } 
 
     for (i = 0; i < server.headers(); i++) {
-      message += "Header num:" + String(i) + " –> ";
+      message += "Header num:" + String(i) + " -> ";
       message += server.headerName(i) + ": ";
-      message += server.header(i) + "\n";
-    }
+      message += server.header(i) + "\n";      
+    } 
 
     Serial.println(message);
-
+ 
   if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
     //Check if body received
-    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");
-    return;
+    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");      
+    return; 
   }
 
-  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );
-
-
+  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );   
+    
+  
   message = "DELETE received:\n";
          message += ReqJson;
          message += "\n";
@@ -142,7 +153,7 @@ void handleDeleteAlerts() {
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
-  JsonArray& alerts = _root["alerts"];
+  JsonArray& alerts = _root["alerts"];     
   std::list<WeekAlert>::iterator wki;
   Alerts oAlert;
   
@@ -300,42 +311,76 @@ void handleNotFound() {
 
 void dumpClients() {
   Serial.print(" Clients:\r\n");
-  stat_info = wifi_softap_get_station_info();
+  struct station_info *stat_info = wifi_softap_get_station_info();
+  IPAddress address;
+  struct ip_addr *pIPaddress;
   while (stat_info != NULL) {
-    IPaddress = &stat_info->ip;
-    address = IPaddress->addr;
+    pIPaddress = &stat_info->ip;
+    address = pIPaddress->addr;
     Serial.print("\t");
     Serial.print(address);
     Serial.print("\r\n");
     stat_info = STAILQ_NEXT(stat_info, next);
+  } 
+}
+
+void enableWiFiSTA() {
+  
+  Serial.println("Configuring WiFi Point: "  + String(ssidSTA) + " Password: " + String(pwdSTA));
+  WiFi.begin(ssidSTA, pwdSTA);
+  
+  Serial.print("Connecting");
+  int timeout = 10;
+  while (WiFi.status() != WL_CONNECTED && timeout > 0) {
+    delay(500);
+    Serial.print(".");
+    timeout--;
   }
+  Serial.println();
+  if (timeout > 0) {
+    mySTA_IP = WiFi.localIP();
+    Serial.print("Connected, IP address: ");
+    Serial.println(mySTA_IP);
+    bSAT_Running = true;
+  } else {
+    Serial.println("Error connecting to WiFi");
+    bSAT_Running = false;
+  }  
+}
+
+void enableWiFiAP() {
+  IPAddress NMask(255, 255, 255, 0);
+  
+  Serial.println("Configuring Access Point: "  + String(ssidAP) + " Password: " + String(pwdAP));
+  
+  WiFi.softAPConfig(mySTA_IP, mySTA_IP, NMask);
+  
+  if (!WiFi.softAP(ssidAP, pwdAP)) {
+    Serial.println("Problems to create AP");    
+    bAP_Running = false;
+  } else {
+    bAP_Running = true;
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.print("AP IP address: ");
+    Serial.println(myIP);  
+  }  
 }
 
 void setup() {
 	delay(1000);
 	Serial.begin(115200);
 
+  Serial.setDebugOutput(true);
+
+  WiFi.mode(WIFI_AP_STA);
+
   //pinMode ( led, OUTPUT );
   //digitalWrite ( led, 0 );
- 
-	Serial.println();
-	Serial.println("Configuring access point: "  + String(ssid) + " Password: " + String(password));
-	/* You can remove the password parameter if you want the AP to be open. */
-  IPAddress Ip(192, 168, 1, 1);
-  IPAddress NMask(255, 255, 255, 0);
-
-  WiFi.mode(WIFI_AP);
-  WiFi.softAPConfig(Ip, Ip, NMask);
   
-	if (!WiFi.softAP(ssid, password)) {
-    Serial.println("Problems to create AP");
-    return;
-	}
-
-	IPAddress myIP = WiFi.softAPIP();
-	Serial.print("AP IP address: ");
-	Serial.println(myIP);
-    
+  enableWiFiSTA();
+ 
+  enableWiFiAP();
+     
   server.on ( "/json", []() {
     String ReqJson = server.arg("plain");
     String message = "Body received:\n";
@@ -357,11 +402,13 @@ void setup() {
   const char * headerkeys[] = {"User-Agent","Cookie","plain"} ;
   size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
   //ask server to track these headers
-  server.collectHeaders(headerkeys, headerkeyssize );
-
-
+  server.collectHeaders(headerkeys, headerkeyssize );  
+    
 	server.begin();
 	Serial.println("HTTP server started");
+
+  WiFi.printDiag(Serial);
+  
 }
 
 void loop() {
