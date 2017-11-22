@@ -158,6 +158,7 @@ public class AlertsActivity extends BaseActivity implements
                 oAlertListAdapter.addAlert(cn);
             }
         }
+        sendAlerts(aAlerts);
     }
 
     public void removeAlerts() {
@@ -410,6 +411,9 @@ public class AlertsActivity extends BaseActivity implements
     }
 
     private void callbackGetAlerts(JSONArray aJSAlerts) {
+        mDB.deleteAll();
+        oAlertListAdapter.removeAll();
+
         ArrayList<Alert> aAlerts = new ArrayList<>();
         for (int i = 0; i < aJSAlerts.length(); i++) {
             try {
@@ -426,7 +430,11 @@ public class AlertsActivity extends BaseActivity implements
                 }
                 oAlert.set_weekdays(aWeekdays);
 
-                aAlerts.add(oAlert);
+                if (mDB.addAlert(oAlert) >= 0) {
+                    oAlertListAdapter.addAlert(oAlert);
+                }
+
+                //aAlerts.add(oAlert);
                 //Gson gson = new Gson();
                 //Alert oAlert = (Alert) gson.fromJson(JSAlert, Alert.class);
             } catch (JSONException e) {
@@ -434,8 +442,6 @@ public class AlertsActivity extends BaseActivity implements
             }
         }
 
-        oAlertListAdapter.items = aAlerts;
-        oAlertListAdapter.notifyDataSetChanged();
 
     }
 
@@ -719,11 +725,10 @@ public class AlertsActivity extends BaseActivity implements
         //RIGHT: this fixed the Activity to be frozen
         ArrayList<Alert> alAlerts = new ArrayList<Alert>();
         alAlerts.add(oAlert);
-        if ( sendDeleteAlerts(alAlerts)) {
-            return mDB.deleteAlert(oAlert);
-        } else {
-            return false;
-        }
+        sendDeleteAlerts(alAlerts);
+        return false;
+
+        //return mDB.deleteAlert(oAlert);
     }
 }
 
