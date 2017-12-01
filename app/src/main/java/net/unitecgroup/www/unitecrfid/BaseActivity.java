@@ -20,8 +20,10 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 /**
  * https://github.com/SecUSo/privacy-friendly-app-example
@@ -166,17 +168,21 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
                 intent.putExtra( PreferenceActivity.EXTRA_NO_HEADERS, true );
                 createBackStack(intent);
                 break;
-            /*
-            case R.id.nav_help:
-                intent = new Intent(this, HelpActivity.class);
+
+            case R.id.nav_scan:
+                intent = new Intent(this, ScanActivity.class);
+                //intent.putExtra( PreferenceActivity.EXTRA_SHOW_FRAGMENT, ScanActivity.PlaceholderFragment.class.getName() );
                 createBackStack(intent);
                 break;
-            */
+
             case R.id.nav_about:
                 intent = new Intent(this, AboutActivity.class);
                 createBackStack(intent);
                 break;
+
             default:
+                //Toast.makeText(this, "Missing Menu", Toast.LENGTH_LONG);
+                break;
         }
     }
 
@@ -196,7 +202,10 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
         toggle.syncState();
 
         mNavigationView = (NavigationView) findViewById(R.id.nav_view);
-        mNavigationView.setNavigationItemSelectedListener(this);
+        if (mNavigationView != null)
+            mNavigationView.setNavigationItemSelectedListener(this);
+        else
+            Log.d("DEBUG", "Missing NavigationView at Activiy layout");
 
         selectNavigationItem(getNavigationDrawerID());
 
