@@ -1,33 +1,21 @@
 package net.unitecgroup.www.unitecrfid;
 
-import android.app.Activity;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-
+import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 //https://developer.android.com/training/basics/fragments/communicating.html#Implement
@@ -50,6 +38,9 @@ public class ScanActivity extends BaseActivity
      */
     private ViewPager mViewPager;
 
+    WifiManager wifi;
+    List<ScanResult> results;
+    private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,20 +52,11 @@ public class ScanActivity extends BaseActivity
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
-        mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager(), this);
+        mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
         // Set up the ViewPager with the sections adapter.
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
     }
 
@@ -110,27 +92,6 @@ public class ScanActivity extends BaseActivity
     @Override
     public void onScanButtonClicked(Uri uri) {
         //TODO: do something with scan click from Fragment
-        /*
-        arraylist.clear();
-        wifi.startScan();
-
-        Toast.makeText(this, "Scanning...." + size, Toast.LENGTH_SHORT).show();
-        try
-        {
-            size = size - 1;
-            while (size >= 0)
-            {
-                HashMap<String, String> item = new HashMap<String, String>();
-                item.put(ITEM_KEY, results.get(size).SSID + "  " + results.get(size).capabilities);
-
-                arraylist.add(item);
-                size--;
-                adapter.notifyDataSetChanged();
-            }
-        }
-        catch (Exception e)
-        { }
-        */
     }
 
     /**
@@ -173,10 +134,9 @@ public class ScanActivity extends BaseActivity
      * one of the sections/tabs/pages.
      */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
-        ScanActivity mActivity;
-        public SectionsPagerAdapter(FragmentManager fm, ScanActivity mActivity) {
+
+        public SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
-            this.mActivity = mActivity;
         }
 
         @Override
@@ -184,7 +144,7 @@ public class ScanActivity extends BaseActivity
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
             if (position == 0) {
-                return ScanWifiFragment.newInstance(mActivity, "wifi");
+                return ScanWifiFragment.newInstance("Test", "wifi");
             } else {
                 return PlaceholderFragment.newInstance(position + 1);
             }
