@@ -33,6 +33,9 @@
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/FSBrowser/FSBrowser.ino
  * 
+ * DHCP Problems - Fixing IP
+ * https://github.com/esp8266/Arduino/issues/1959
+ * 
  * Get List of Connected Devices
  * http://www.esp8266.com/viewtopic.php?p=30091
  */
@@ -55,18 +58,26 @@ extern "C" {
 
 //using namespace std;
 
+
 /* Set these to your desired credentials. */
 const char *ssidAP = "UnitecDemoServer";
 const char *pwdAP = "unitec2017";
 
 const char *ssidSTA = "UNITEC_VISITANTES";
 const char *pwdSTA = "Bem-vindo!"; 
+IPAddress ipSTA(10, 23, 5, 201);
+IPAddress gatewaySTA(10, 23, 1, 1);
+IPAddress subnetSTA(255, 255, 255, 0);
 
 //const char *ssidSTA = "UNITEC_USUARIOS";
 //const char *pwdSTA = "#4tva82015"; 
 
 //const char *ssidSTA = "JCSSAP";
 //const char *pwdSTA = "jcss8469"; 
+
+/* You can remove the password parameter if you want the AP to be open. */
+IPAddress ipAP(192, 168, 1, 2); //default value
+IPAddress gatewayAP(192, 168, 1, 1); //default value
 
 
 const int led = 2;
@@ -97,9 +108,8 @@ std::list<WeekAlert> WeekdaysList[8];
 ESP8266WebServer server(80);
 boolean bAP_Running = false;
 boolean bSAT_Running = false;
-/* You can remove the password parameter if you want the AP to be open. */
-IPAddress mySTA_IP(192, 168, 1, 1); //default value
-
+int iConnectedAP = -1;
+int iChannel = 11;
 
 bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
@@ -327,9 +337,13 @@ void dumpClients() {
 void enableWiFiSTA() {
   
   Serial.println("Configuring WiFi Point: "  + String(ssidSTA) + " Password: " + String(pwdSTA));
-  WiFi.begin(ssidSTA, pwdSTA);
+    
+  WiFi.config(ipSTA, gatewaySTA, subnetSTA);
   
-  Serial.print("Connecting");
+  if (WiFi.status() != WL_CONNECTED) 
+    WiFi.begin(ssidSTA, pwdSTA);
+  
+  Serial.println("Connecting STA WiFi");
   int timeout = 10;
   while (WiFi.status() != WL_CONNECTED && timeout > 0) {
     delay(500);
@@ -338,9 +352,9 @@ void enableWiFiSTA() {
   }
   Serial.println();
   if (timeout > 0) {
-    mySTA_IP = WiFi.localIP();
+    //mySTA_IP = WiFi.localIP();
     Serial.print("Connected, IP address: ");
-    Serial.println(mySTA_IP);
+    Serial.println(WiFi.localIP());    
     bSAT_Running = true;
   } else {
     Serial.println("Error connecting to WiFi");
@@ -349,25 +363,28 @@ void enableWiFiSTA() {
 }
 
 void enableWiFiAP() {
-  IPAddress NMask(255, 255, 255, 0);
+  //IPAddress NMask(255, 255, 255, 0);
+  //String ssid = WiFi.softAPmacAddress();
+  //ssid = ssid.substring(ssid.length()-5, ssid.length());
   
   Serial.println("Configuring Access Point: "  + String(ssidAP) + " Password: " + String(pwdAP));
   
-  WiFi.softAPConfig(mySTA_IP, mySTA_IP, NMask);
+  //WiFi.softAPConfig(mySTA_IP, mySTA_IP, NMask);
   
   if (!WiFi.softAP(ssidAP, pwdAP)) {
     Serial.println("Problems to create AP");    
     bAP_Running = false;
   } else {
     bAP_Running = true;
-    IPAddress myIP = WiFi.softAPIP();
+    ipAP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
-    Serial.println(myIP);  
+    Serial.println(ipAP);  
+    Serial.printf("MAC address = %s\n", WiFi.softAPmacAddress().c_str());    
   }  
 }
 
 void setup() {
-	delay(1000);
+	delay(10);
 	Serial.begin(115200);
 
   Serial.setDebugOutput(true);
@@ -376,6 +393,8 @@ void setup() {
 
   //pinMode ( led, OUTPUT );
   //digitalWrite ( led, 0 );
+
+  delay(100);
   
   enableWiFiSTA();
  
@@ -413,4 +432,11 @@ void setup() {
 
 void loop() {
 	server.handleClient();
+
+  int iTemp = WiFi.softAPgetStationNum();
+  if (iTemp != iConnectedAP) {
+    Serial.printf("Stations connected = %d\n", iTemp);
+    iConnectedAP = iTemp;
+  }
+  
 }
