@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
@@ -46,6 +47,9 @@ import java.util.List;
  *
  * Remove duplicate SSID and order by RSSI
  * https://stackoverflow.com/questions/16119985/duplicate-ssid-in-scanning-wifi-result/27046433#27046433
+ *
+ * Connection WAP or WEP
+ * https://gist.github.com/Cheesebaron/5844638
  */
 public class ScanWifiFragment extends ListFragment {
     // TODO: Rename parameter arguments, choose names that match
@@ -61,16 +65,21 @@ public class ScanWifiFragment extends ListFragment {
     ListView lv;
     TextView textStatus;
     Button buttonScan;
+    Boolean bScanning = true;
+
     List<ScanResult> mAllResults;
     List<ScanResult> mResults;
 
     String ITEM_KEY = "key";
     ArrayList<HashMap<String, String>> arraylist;
-    SimpleAdapter adapter;
+    //SimpleAdapter adapter;
+    WifiListAdapter adapter;
 
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
 
     private OnScanButtonListener mListener;
+    private BroadcastReceiver mBroadcastScan;
+    private BroadcastReceiver mBroadcastConnection;
 
 
     public ScanWifiFragment() {
@@ -104,7 +113,10 @@ public class ScanWifiFragment extends ListFragment {
         item.put(ITEM_KEY, "TEST SSID 0");
         arraylist.add(item);
 
-        this.adapter = new SimpleAdapter(getActivity(), arraylist, R.layout.listview_scan_wifi_row, new String[] { ITEM_KEY }, new int[] { R.id.list_value });
+        mResults = new ArrayList<>();
+
+        //this.adapter = new SimpleAdapter(getActivity(), arraylist, R.layout.listview_scan_wifi_row, new String[] { ITEM_KEY }, new int[] { R.id.list_value });
+        this.adapter = new WifiListAdapter(getActivity(), R.layout.listview_scan_wifi_row, mResults, wifi);
         this.setListAdapter(this.adapter);
 
         if (getArguments() != null) {
@@ -129,12 +141,13 @@ public class ScanWifiFragment extends ListFragment {
         } else {
             //Already Granted
             buttonScan.setText("Scanning");
+            bScanning = true;
             wifi.startScan();
         }
     }
 
     private void registerScanResults() {
-        this.getActivity().registerReceiver(new BroadcastReceiver()
+        mBroadcastScan = new BroadcastReceiver()
         {
             @Override
             public void onReceive(Context c, Intent intent)
@@ -142,12 +155,46 @@ public class ScanWifiFragment extends ListFragment {
                 mAllResults = wifi.getScanResults();
 
                 buttonScan.setText("Scan");
+                bScanning = false;
 
                 getActivity().unregisterReceiver(this);
                 addWiFiList(mAllResults);
             }
-        }, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+        };
 
+        getActivity().registerReceiver(mBroadcastScan, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+    }
+
+    private void unregisterScanResults() {
+        getActivity().unregisterReceiver(mBroadcastScan);
+    }
+
+    private void registerWiFiConnection() {
+        mBroadcastConnection = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+
+                if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
+
+                    NetworkInfo info = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+
+                    switch (info.getState()) {
+                        case CONNECTING:
+                            break;
+                        case CONNECTED:
+                            break;
+                        case DISCONNECTING:
+                            break;
+                        case DISCONNECTED:
+                            break;
+                        case SUSPENDED:
+                            break;
+                    }
+                }
+            }
+        };
+        getActivity().registerReceiver(mBroadcastConnection, new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION));
     }
 
     @Override
@@ -159,6 +206,7 @@ public class ScanWifiFragment extends ListFragment {
         textStatus = (TextView) rootView.findViewById(R.id.textStatus);
         buttonScan = (Button) rootView.findViewById(R.id.buttonScan);
         lv = (ListView) rootView.findViewById(android.R.id.list);
+        final ScanWifiFragment sf = this;
 
         buttonScan.setOnClickListener(new View.OnClickListener()
         {
@@ -168,10 +216,16 @@ public class ScanWifiFragment extends ListFragment {
                 //Uri uri = null;
                 //onButtonPressed(uri);
                 //arraylist.clear();
-                registerScanResults();
-
-                buttonScan.setText("Scanning");
-                wifi.startScan();
+                if (!bScanning) {
+                    registerScanResults();
+                    buttonScan.setText("Scanning");
+                    bScanning = true;
+                    wifi.startScan();
+                } else {
+                    bScanning = false;
+                    buttonScan.setText("Scan");
+                    unregisterScanResults();
+                }
             }
         });
 
@@ -190,34 +244,29 @@ public class ScanWifiFragment extends ListFragment {
         try
         {
             arraylist.clear();
-            mResults = new ArrayList<>();
+            mResults.clear();
 
             for (int i = 0; i < mAllResults.size(); i++) {
                 ScanResult result = mAllResults.get(i);
                 if (!result.SSID.isEmpty()) {
-                    String key = result.SSID + " " + result.capabilities;
-                    int CurrentLevel = wifi.calculateSignalLevel(result.level, 5);
+                    String key = result.SSID; // + " " + result.capabilities;
+                    int currentLevel = wifi.calculateSignalLevel(result.level, 5);
                     if (!signalStrength.containsKey(key)) {
+                        //stores de SSID into the selected SSID and also its position from
+                        //mAllResults to allow us to exchange it if necesary
                         signalStrength.put(key, i);
-
-                        item = new HashMap<String, String>();
-                        item.put(ITEM_KEY, result.SSID + "  " + result.capabilities);
-                        arraylist.add(item);
-
+                        mResults.add(result);
                         adapter.notifyDataSetChanged();
                     } else {
                         //replaces the same SSID already found by one with a stronger signals
-                        int position = signalStrength.get(key);
-                        ScanResult updateItem = mAllResults.get(position);
-                        int OldLevel = wifi.calculateSignalLevel(updateItem.level, 5);
+                        int oldPosition = signalStrength.get(key);
+                        ScanResult oldResult = mAllResults.get(oldPosition);
+                        int oldLevel = wifi.calculateSignalLevel(oldResult.level, 5);
 
-                        if (OldLevel > CurrentLevel) {
-                            item = new HashMap<String, String>();
-                            item.put(ITEM_KEY, updateItem.SSID + "  " + updateItem.capabilities);
-                            arraylist.set(position, item);
+                        if (currentLevel > oldLevel) {
+                            mResults.set(oldPosition, result);
                             adapter.notifyDataSetChanged();
                         }
-
                     }
                 }
             }
@@ -292,8 +341,8 @@ public class ScanWifiFragment extends ListFragment {
         final EditText oEditTextPassword = (EditText) oDialogView.findViewById(R.id.editTextPassword);
         final int iWiFiPosition = position;
 
-        HashMap<String, String> item = arraylist.get(iWiFiPosition);
-        oTextViewSSID.setText(item.get(ITEM_KEY));
+        ScanResult sc = mResults.get(iWiFiPosition);
+        oTextViewSSID.setText(sc.SSID);
 
         AlertDialog.Builder oDialogBuilder = new AlertDialog.Builder(getActivity());
         oDialogBuilder
@@ -318,33 +367,67 @@ public class ScanWifiFragment extends ListFragment {
                         }
                 );
 
-        AlertDialog oAlertDialog = oDialogBuilder.create();
-        oAlertDialog.show();
-    }
-
-    private void connectToAP(int iWiFiPosition, String password) {
-
-        HashMap<String, String> item = arraylist.get(iWiFiPosition);
-
-        String myNetworksSSID = item.get(ITEM_KEY);
-
-        for (WifiConfiguration config : wifi.getConfiguredNetworks()) {
-            String newSSID = config.SSID;
-
-            if (myNetworksSSID.equals(newSSID)) {
-                wifi.disconnect();
-                wifi.enableNetwork(config.networkId, true);
-                wifi.reconnect();
-
-                return;
+        //Check if the network was previoully created, just connect
+        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+        WifiConfiguration conf = null;
+        for (WifiConfiguration i : list) {
+            if (i.SSID != null && i.SSID.equals("\"" + sc.SSID + "\"")) {
+                conf = i;
             }
         }
 
-        //It didn't find the AP Network already register into the smartphone, create
+        if (conf != null) {
+            connectToConf(i);
+        } else {
+            AlertDialog oAlertDialog = oDialogBuilder.create();
+            oAlertDialog.show();
+        }
+    }
+
+    private void connectToAP(int iWiFiPosition, String networkPass) {
+
+        registerWiFiConnection();
+
+        ScanResult sc = mResults.get(iWiFiPosition);
+        String networkSSID = sc.SSID;
+        String type = sc.capabilities;
+
         WifiConfiguration conf = new WifiConfiguration();
-        conf.SSID = "\"" + myNetworksSSID + "\"";
-        conf.preSharedKey = "\""+ password +"\"";
+        conf.SSID = "\"" + networkSSID + "\""; // Please note the quotes. String
+        // should contain ssid in quotes
+
+        if (type.contains("WEP")) {
+            // wep
+            conf.wepKeys[0] = "\"" + networkPass + "\"";
+            conf.wepTxKeyIndex = 0;
+            conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+            conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
+        } else if (type.contains("WPA")) {
+            // wpa
+            conf.preSharedKey = "\"" + networkPass + "\"";
+        } else if (type.contains("OPEN")) {
+            // open
+            conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+        }
+
         wifi.addNetwork(conf);
 
+        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+        for (WifiConfiguration i : list) {
+            if (i.SSID != null && i.SSID.equals("\"" + networkSSID + "\"")) {
+                connectToConf(i);
+                break;
+            }
+        }
+    }
+
+    private void connectToConf(WifiConfiguration conf) {
+        wifi.disconnect();
+
+        if(!wifi.enableNetwork(conf.networkId, true)){
+            Toast.makeText(getActivity(), "Incorrect Password", Toast.LENGTH_LONG).show();
+        }
+
+        wifi.reconnect();
     }
 }
