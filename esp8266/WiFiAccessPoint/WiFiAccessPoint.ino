@@ -38,6 +38,9 @@
  * 
  * Get List of Connected Devices
  * http://www.esp8266.com/viewtopic.php?p=30091
+ * 
+ * Cancel STA reconnection
+ * http://bbs.espressif.com/viewtopic.php?t=324
  */
  
 /* Create a WiFi access point and provide a web server on it. */
@@ -58,13 +61,26 @@ extern "C" {
 
 //using namespace std;
 
+struct WifiConfig {
+  const char *ssid;
+  const char *password;  
+  IPAddress ip;
+  //IPAddress gateway;
+  //IPAddress subnet; 
+};
+
 
 /* Set these to your desired credentials. */
 const char *ssidAP = "UnitecDemoServer";
 const char *pwdAP = "unitec2017";
+/* You can remove the password parameter if you want the AP to be open. */
+IPAddress ipAP(192, 168, 1, 2); //default value
+IPAddress gatewayAP(192, 168, 1, 1); //default value
 
-const char *ssidSTA = "UNITEC_VISITANTES";
-const char *pwdSTA = "Bem-vindo!"; 
+
+
+String ssidSTA = "UNITEC_VISITANTES";
+String pwdSTA = "Bem-vindo!"; 
 IPAddress ipSTA(10, 23, 5, 201);
 IPAddress gatewaySTA(10, 23, 1, 1);
 IPAddress subnetSTA(255, 255, 255, 0);
@@ -72,12 +88,12 @@ IPAddress subnetSTA(255, 255, 255, 0);
 //const char *ssidSTA = "UNITEC_USUARIOS";
 //const char *pwdSTA = "#4tva82015"; 
 
+//const char *ssidSTA = "GVT-7B39";
+//const char *pwdSTA = "0071749692"; 
+
 //const char *ssidSTA = "JCSSAP";
 //const char *pwdSTA = "jcss8469"; 
 
-/* You can remove the password parameter if you want the AP to be open. */
-IPAddress ipAP(192, 168, 1, 2); //default value
-IPAddress gatewayAP(192, 168, 1, 1); //default value
 
 
 const int led = 2;
@@ -103,221 +119,30 @@ struct WeekAlert {
 };
 
 std::map<int, Alerts> AlertsMap;
+std::list<WifiConfig> wifiSTAList; //list of all STA configured
 std::list<WeekAlert> WeekdaysList[8];
 
 ESP8266WebServer server(80);
 boolean bAP_Running = false;
-boolean bSAT_Running = false;
+boolean bSTA_Running = false;
 int iConnectedAP = -1;
 int iChannel = 11;
 
-bool compFirst(const WeekAlert & a, const WeekAlert & b) {
-  return a.iTime < b.iTime;
+os_timer_t mTimer;
+
+bool _timeout = false;
+
+//Nunca execute nada na interrupcao, apenas setar flags!
+void tCallback(void *tCall){
+    _timeout = true;
 }
 
-/* Just a little test message.  Go to http://192.168.1.1 in a web browser
- * connected to this access point to see it.
- */
-void handleRoot() {
-	server.send(200, "text/html", "<h1>You are connected</h1>");
+void usrInit(void){
+    os_timer_setfn(&mTimer, tCallback, NULL);
+    //The milliseconds parameter is the duration of the timer measured in milliseconds. The repeat parameter is whether or not the timer will restart once it has reached zero.
+    os_timer_arm(&mTimer, 10000, true);    
 }
 
-void returnFail(String msg) {
-  server.send(500, "text/plain", msg + "\r\n");
-}
-
-
-void handleDeleteAlerts() {
-
-    String message = "";
-    int i;
-
-    for (i = 0; i < server.args(); i++) {
-      message += "Arg num:" + String(i) + " -> ";
-      message += server.argName(i) + ": ";
-      message += server.arg(i) + "\n";      
-    } 
-
-    for (i = 0; i < server.headers(); i++) {
-      message += "Header num:" + String(i) + " -> ";
-      message += server.headerName(i) + ": ";
-      message += server.header(i) + "\n";      
-    } 
-
-    Serial.println(message);
- 
-  if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
-    //Check if body received
-    server.send(500, "application/json", "{\"Status\":\"-1\", \"Message\":\"Missing Fields\"}");      
-    return; 
-  }
-
-  String ReqJson = (server.hasArg("plain") ? server.arg("plain") : server.header("plain") );   
-    
-  
-  message = "DELETE received:\n";
-         message += ReqJson;
-         message += "\n";
-  
-  Serial.println(message);
-  
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& _root = jsonBuffer.parseObject(ReqJson);
-  JsonArray& alerts = _root["alerts"];     
-  std::list<WeekAlert>::iterator wki;
-  Alerts oAlert;
-  
-  //alert == {"_duration":"00:15","_id":1,"_time":"06:30","Weekdays":[2,3,4,5,6]}
-  for(JsonArray::iterator jsonIt=alerts.begin(); jsonIt!=alerts.end(); ++jsonIt) {
-        
-    JsonObject& alert = *jsonIt;    
-    Serial.println("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
-    
-    auto it = AlertsMap.find( alert["_id"].as<int>() );
-    
-    if (it != AlertsMap.end()) {
-      oAlert = (*it).second;
-      Serial.println("DELETING ID: " + String(oAlert.iId) );
-    
-      //search for Alert Id inside weekdaysList to remove it
-      for (i = 0; i < 8; i++) {
-        if (CHECK_BIT(oAlert.bWeekdays, i)) {
-          //delete weekday
-          wki = WeekdaysList[i].begin();
-                              
-          //iterate in all values inside the week
-          Serial.print("DELETING WEEKDAYs: ");
-          while(wki != WeekdaysList[i].end()) {
-            if ((*wki).iId == oAlert.iId ) {
-              //get out of the loop
-              Serial.print(String(i) + " ");
-              wki = WeekdaysList[i].erase(wki);
-              break;
-            }
-            ++wki;
-          }
-          Serial.println(); 
-        }            
-      }
-
-      //Now delete the alert from DB
-      AlertsMap.erase( it );      
-      server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
-      
-    } else {
-      Serial.println("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
-      server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
-    }    
-  }
-}
-
-/**
- * Main Function
- */
-void handleAlerts() {
-    String ReqJson = server.arg("plain");
-    String message = "POST received:\n";
-           message += ReqJson;
-           message += "\n";
-
-    Serial.println(message);
-
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& _root = jsonBuffer.parseObject(ReqJson);
-    JsonArray& alerts = _root["alerts"];     
-    Alerts oAlert;
-    int i;    
-    
-    //alert == {"_duration":"00:15","_id":1,"_time":"06:30","Weekdays":[2,3,4,5,6]}
-    for(JsonArray::iterator it=alerts.begin(); it!=alerts.end(); ++it) 
-    {
-        JsonObject& alert = *it;
-        oAlert = parseAlertJson(alert);
-        AlertsMap[ alert["_id"].as<int>() ] = oAlert;        
-        
-        //check if the weekday is set and add it to WeekdaysList
-        for (i = 0; i < 8; i++) {
-          if (CHECK_BIT(oAlert.bWeekdays, i)) {
-            //Check if it exists and update if necessary, add it otherwise
-            WeekdaysListInsert(WeekdaysList[i], WeekAlert(oAlert.iId, oAlert.iTime));
-          } else {
-            //Check if it exists and remove it if necessary
-            WeekdaysListRemove(WeekdaysList[i], WeekAlert(oAlert.iId, oAlert.iTime));
-          }
-        }
-    }
-
-    dumpAlertsMap();
-    dumpWeekdaysList();
-
-    //Sort all weekdays time
-    for (i = 0; i < 8; i++) {
-      WeekdaysList[i].sort(compFirst);          
-    }
-
-    Serial.println("SORTED");
-    
-    dumpWeekdaysList();
-   
-    server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
-}
-
-//Return all alerts at the database
-void handleDumpAlerts() {
-  dumpAlertsMap();
-  dumpWeekdaysList();
-
-  int i;
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-  root["Status"] = 1;
-  JsonArray& alerts = root.createNestedArray("alerts");
-
-  //iterates all DB and create the JSON Array for each alert as JSON Object
-  for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
-    Alerts oAlert = (*it).second;
-    JsonObject& JsonAlert = jsonBuffer.createObject();
-    JsonAlert["_id"] = oAlert.iId;
-    JsonAlert["_time"] = oAlert.iTime;
-    JsonAlert["_duration"] = oAlert.iDuration;
-    JsonArray& JsonWeekdays = JsonAlert.createNestedArray("Weekdays");
-
-    //Parse the binary represetation of weekdays into an Array[interger]
-    for (i = 0; i < 8; i++) {
-      if (CHECK_BIT(oAlert.bWeekdays, i)) {        
-        JsonWeekdays.add(i);
-      }
-    }
-    
-    alerts.add(JsonAlert);
-  }  
-
-  String JSON;
-  root.printTo(JSON);
-  
-  server.send ( 200, "application/json", JSON );
-}
-
-void handleNotFound() {
-  //digitalWrite ( led, 1 );
-  
-  String message = "File Not Found\n\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += ( server.method() == HTTP_GET ) ? "GET" : "POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-
-  for ( uint8_t i = 0; i < server.args(); i++ ) {
-    message += " " + server.argName ( i ) + ": " + server.arg ( i ) + "\n";
-  }
-
-  server.send ( 404, "text/plain", message );
-  
-  //digitalWrite ( led, 0 );
-}
 
 void dumpClients() {
   Serial.print(" Clients:\r\n");
@@ -334,42 +159,61 @@ void dumpClients() {
   } 
 }
 
-void enableWiFiSTA() {
-  
-  Serial.println("Configuring WiFi Point: "  + String(ssidSTA) + " Password: " + String(pwdSTA));
+bool enableWiFiSTA() {
+  String hostname = WiFi.softAPmacAddress();
+  hostname.replace(":","");
+  hostname = "ESP" + hostname.substring(hostname.length()-4, hostname.length());
     
-  WiFi.config(ipSTA, gatewaySTA, subnetSTA);
+  Serial.println("Configuring WiFi Point: "  + ssidSTA + " Password: " + pwdSTA + " hostname: " + hostname);
+    
+  //start timer
+  usrInit();
+ 
+  WiFi.disconnect();
   
+  WiFi.hostname(hostname);
+
+  IPAddress emptyIp(0,0,0,0);
+  if (ipSTA != emptyIp) {    
+    WiFi.config(ipSTA, gatewaySTA, subnetSTA);
+    Serial.print("Configuring WiFi IP: "); 
+    Serial.print(ipSTA);
+    Serial.print(" Gateway: "); 
+    Serial.print(gatewaySTA);
+    Serial.print(" Subnet: "); 
+    Serial.println(subnetSTA);    
+  }
+    
   if (WiFi.status() != WL_CONNECTED) 
-    WiFi.begin(ssidSTA, pwdSTA);
+    WiFi.begin(ssidSTA.c_str(), pwdSTA.c_str());
   
   Serial.println("Connecting STA WiFi");
-  int timeout = 10;
-  while (WiFi.status() != WL_CONNECTED && timeout > 0) {
+  int timeout = 20;
+  while (WiFi.status() != WL_CONNECTED && !_timeout) {
     delay(500);
     Serial.print(".");
-    timeout--;
+    //timeout--;
   }
   Serial.println();
-  if (timeout > 0) {
+  if (WiFi.status() == WL_CONNECTED) {
     //mySTA_IP = WiFi.localIP();
     Serial.print("Connected, IP address: ");
     Serial.println(WiFi.localIP());    
-    bSAT_Running = true;
+    bSTA_Running = true;
   } else {
     Serial.println("Error connecting to WiFi");
-    bSAT_Running = false;
-  }  
+    bSTA_Running = false;
+  }
+
+  return bSTA_Running;
 }
 
 void enableWiFiAP() {
   //IPAddress NMask(255, 255, 255, 0);
-  //String ssid = WiFi.softAPmacAddress();
-  //ssid = ssid.substring(ssid.length()-5, ssid.length());
-  
+    
   Serial.println("Configuring Access Point: "  + String(ssidAP) + " Password: " + String(pwdAP));
   
-  //WiFi.softAPConfig(mySTA_IP, mySTA_IP, NMask);
+  //WiFi.softAPConfig(apIP, mySTA_IP, NMask);
   
   if (!WiFi.softAP(ssidAP, pwdAP)) {
     Serial.println("Problems to create AP");    
@@ -381,6 +225,41 @@ void enableWiFiAP() {
     Serial.println(ipAP);  
     Serial.printf("MAC address = %s\n", WiFi.softAPmacAddress().c_str());    
   }  
+}
+
+
+void scanWiFi() {
+  Serial.println("scan start");
+
+  // WiFi.scanNetworks will return the number of networks found
+  int n = WiFi.scanNetworks();
+  char* ssidAux;
+  
+  Serial.println("scan done");
+  if (n == 0)
+    Serial.println("no networks found");
+  else
+  {
+    Serial.print(n);
+    Serial.println(" networks found");
+    for (int i = 0; i < n; ++i)
+    {
+      // Print SSID and RSSI for each network found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(": ");
+      Serial.print(WiFi.BSSIDstr(i));
+      Serial.printf(" Channel: %d ", WiFi.channel(i) );            
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.print(")");
+      Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+      delay(10);
+     
+    }
+  }
+  Serial.println("");  
 }
 
 void setup() {
@@ -395,8 +274,8 @@ void setup() {
   //digitalWrite ( led, 0 );
 
   delay(100);
-  
-  enableWiFiSTA();
+ 
+  //enableWiFiSTA();
  
   enableWiFiAP();
      
@@ -413,6 +292,8 @@ void setup() {
   
   server.onNotFound ( handleNotFound );
 	server.on("/", handleRoot);
+  server.on("/scan", HTTP_GET, handleScan);
+  server.on("/scan", HTTP_POST, handleConnect);
   server.on("/alerts", HTTP_GET, handleDumpAlerts);
   server.on("/alerts", HTTP_POST, handleAlerts);
   server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
@@ -438,5 +319,22 @@ void loop() {
     Serial.printf("Stations connected = %d\n", iTemp);
     iConnectedAP = iTemp;
   }
+
+
+  if (_timeout){
+      Serial.println("TIME IS UP!");
+      _timeout = false;
+      if (WiFi.status() != WL_CONNECTED) { 
+          Serial.println("WIFI STA DISCONNECTING!");
+          WiFi.setAutoConnect(false);
+          WiFi.disconnect();
+          os_timer_disarm(&mTimer);
+          //wifi_station_set_reconnect_policy(false); // if the ESP8266 station connected to the router, and then the connection broke, ESP8266 will not try to reconnect to the router.
+          //wifi_station_set_auto_connect(false); //the ESP8266 station will not try to connect to the router automatically when power on until wifi_station_connect is called.
+          //wifi_station_disconnect(); // ESP8266 station disconnects to the router, or ESP8266 station stops trying to connect to the target router.
+      }
+  }
+
+  yield();
   
 }
