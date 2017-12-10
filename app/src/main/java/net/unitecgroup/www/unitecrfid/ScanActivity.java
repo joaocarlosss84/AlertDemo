@@ -1,7 +1,10 @@
 package net.unitecgroup.www.unitecrfid;
 
+import android.content.Context;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -15,11 +18,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.List;
 
 //https://developer.android.com/training/basics/fragments/communicating.html#Implement
 //https://stackoverflow.com/questions/5452940/how-can-i-get-android-wifi-scan-results-into-a-list
+//
+//How to switch between Fragments
+//https://developer.android.com/reference/android/support/v4/app/FragmentPagerAdapter.html
 public class ScanActivity extends BaseActivity
         implements ScanWifiFragment.OnScanButtonListener {
 
@@ -38,6 +45,11 @@ public class ScanActivity extends BaseActivity
      */
     private ViewPager mViewPager;
 
+    public String mBeaconIP;
+
+    private WifiInfo mWifiInfo;
+    private WifiManager wifi;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +65,27 @@ public class ScanActivity extends BaseActivity
         // Set up the ViewPager with the sections adapter.
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
+
+        //Set current WiFi Connection to restore it onDestroy
+        wifi = (WifiManager) this.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        mWifiInfo = wifi.getConnectionInfo();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        //Restore the previous WiFi Connection
+        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+        for (WifiConfiguration conf : list) {
+            //"\"" + networkSSID + "\""
+            if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
+                wifi.disconnect();
+                wifi.enableNetwork(conf.networkId, true);
+                wifi.reconnect();
+                break;
+            }
+        }
 
     }
 
@@ -88,6 +121,16 @@ public class ScanActivity extends BaseActivity
     @Override
     public void onScanButtonClicked(Uri uri) {
         //TODO: do something with scan click from Fragment
+    }
+
+    public void changeToNextFragment() {
+        if (mViewPager.getCurrentItem() < mSectionsPagerAdapter.getCount()) {
+            changeToFragment(mViewPager.getCurrentItem()+1);
+        }
+    }
+
+    public void changeToFragment(int iFragment) {
+        mViewPager.setCurrentItem(iFragment);
     }
 
     /**

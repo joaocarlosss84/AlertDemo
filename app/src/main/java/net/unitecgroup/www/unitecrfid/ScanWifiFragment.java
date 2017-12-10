@@ -1,6 +1,7 @@
 package net.unitecgroup.www.unitecrfid;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -10,15 +11,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
+import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,6 +56,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static android.text.format.Formatter.formatIpAddress;
+
 
 /**
  * A simple {@link Fragment} subclass.
@@ -70,6 +77,9 @@ import java.util.Map;
  *
  * Connection WAP or WEP
  * https://gist.github.com/Cheesebaron/5844638
+ *
+ * Get WiFi Connection Status
+ * https://stackoverflow.com/questions/10328215/retrieve-wifi-connection-statusandroid
  */
 public class ScanWifiFragment extends ListFragment {
     // TODO: Rename parameter arguments, choose names that match
@@ -94,6 +104,7 @@ public class ScanWifiFragment extends ListFragment {
     List<WiFiResult> mResults;
 
     WifiListAdapter adapter;
+    WifiConfiguration mConf;
 
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
 
@@ -136,6 +147,12 @@ public class ScanWifiFragment extends ListFragment {
         if (getArguments() != null) {
             mFragmentType = getArguments().getInt(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
+        }
+
+        if (mFragmentType == WIFIFRAGMENT) {
+            textStatus.setText("Search Beacons");
+        } else {
+            textStatus.setText("Set Beacon WiFi");
         }
 
         wifi = (WifiManager) this.getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -190,32 +207,99 @@ public class ScanWifiFragment extends ListFragment {
     }
 
     private void registerWiFiConnection() {
-
-        mBroadcastConnection = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-
-                if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
-
-                    NetworkInfo info = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-
-                    switch (info.getState()) {
-                        case CONNECTING:
-                            break;
-                        case CONNECTED:
-                            break;
-                        case DISCONNECTING:
-                            break;
-                        case DISCONNECTED:
-                            break;
-                        case SUSPENDED:
-                            break;
+        if (mBroadcastConnection == null) {
+            mBroadcastConnection = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    String action = intent.getAction();
+                    if (action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
+                    } else if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
+                        int iTemp = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
+                                WifiManager.WIFI_STATE_UNKNOWN);
+                        //LogUtil.d(LOG_SET, "+++++++-----------wifiStateReceiver------+++++++", DEBUG);
+                        Log.d("WIFISTATECHANGED", "checkState");
+                        checkState(iTemp);
+                    } else if (action.equals(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION)) {
+                        NetworkInfo.DetailedState state = WifiInfo.getDetailedStateOf((SupplicantState)
+                                intent.getParcelableExtra(WifiManager.EXTRA_SUPPLICANT_CONNECTED));
+                        WifiInfo info = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
+                        changeState(state, info);
+                        Log.d("SUPPLICANTSTATECHANGED", "changeState");
+                    } else if (action.equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
+                        NetworkInfo.DetailedState state =
+                                ((NetworkInfo) intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO)).getDetailedState();
+                        WifiInfo info = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
+                        Log.d("NETWORKSTATECHANGED", "changeState");
+                        changeState(state, info);
                     }
                 }
-            }
-        };
-        getActivity().registerReceiver(mBroadcastConnection, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
+
+                private void changeState(NetworkInfo.DetailedState aState, WifiInfo info) {
+                    //LogUtil.d(LOG_SET, ">>>>>>>>>>>>>>>>>>changeState<<<<<<<<<<<<<<<<"+aState, DEBUG);
+                    if (aState == NetworkInfo.DetailedState.SCANNING) {
+                        Log.d("wifiSupplicanState", "SCANNING");
+                    } else if (aState == NetworkInfo.DetailedState.CONNECTING) {
+                        Log.d("wifiSupplicanState", "CONNECTING");
+                    } else if (aState == NetworkInfo.DetailedState.OBTAINING_IPADDR) {
+                        Log.d("wifiSupplicanState", "OBTAINING_IPADDR");
+                    } else if (aState == NetworkInfo.DetailedState.CONNECTED) {
+                        Log.d("wifiSupplicanState", "CONNECTED");
+                        //Only change the screen if the WiFi connection to the beacon was succeed
+                        //Get the BeaconIP address to exchange messages to it.
+                        if (info.getSSID().equals(mConf.SSID)) {
+                            DhcpInfo dinfo = wifi.getDhcpInfo();
+                            Log.i("NETWORKSTATECHANGED", "info: "+ dinfo.toString()+"");
+                            ScanActivity oParent = (ScanActivity) getActivity();
+                            oParent.mBeaconIP = intToIp(dinfo.serverAddress);
+                            gotoBeaconFragment();
+                        }
+                    } else if (aState == NetworkInfo.DetailedState.DISCONNECTING) {
+                        Log.d("wifiSupplicanState", "DISCONNECTING");
+                    } else if (aState == NetworkInfo.DetailedState.DISCONNECTED) {
+                        Log.d("wifiSupplicanState", "DISCONNECTTED");
+                    } else if (aState == NetworkInfo.DetailedState.FAILED) {
+                    }
+                }
+
+                public void checkState(int aInt) {
+                    //LogUtil.d(LOG_SET,"==>>>>>>>>checkState<<<<<<<<"+aInt, DEBUG);
+                    if (aInt == WifiManager.WIFI_STATE_ENABLING) {
+                        Log.d("WifiManager", "WIFI_STATE_ENABLING");
+                    } else if (aInt == WifiManager.WIFI_STATE_ENABLED) {
+                        Log.d("WifiManager", "WIFI_STATE_ENABLED");
+                    } else if (aInt == WifiManager.WIFI_STATE_DISABLING) {
+                        Log.d("WifiManager", "WIFI_STATE_DISABLING");
+                    } else if (aInt == WifiManager.WIFI_STATE_DISABLED) {
+                        Log.d("WifiManager", "WIFI_STATE_DISABLED");
+                    }
+                }
+            };
+        }
+        IntentFilter filter = new IntentFilter();
+
+        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        filter.addAction(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
+
+        getActivity().registerReceiver(mBroadcastConnection, filter);
+    }
+
+    private void gotoBeaconFragment() {
+        unregisterWiFiConnection();
+        ((ScanActivity) getActivity()).changeToNextFragment();
+    }
+
+    @SuppressLint("DefaultLocale")
+    private String intToIp(int ip) {
+        return String.format("%d.%d.%d.%d", (ip & 0xff),
+                    (ip >> 8 & 0xff), (ip >> 16 & 0xff),
+                    (ip >> 24 & 0xff));
+    }
+
+    private void unregisterWiFiConnection() {
+        getActivity().unregisterReceiver(mBroadcastConnection);
+        mBroadcastConnection = null;
     }
 
     @Override
@@ -443,8 +527,6 @@ public class ScanWifiFragment extends ListFragment {
 
     private void connectToAP(int iWiFiPosition, String networkPass) {
 
-        registerWiFiConnection();
-
         WiFiResult sc = mResults.get(iWiFiPosition);
         String networkSSID = sc.SSID;
         String type = sc.capabilities;
@@ -481,6 +563,9 @@ public class ScanWifiFragment extends ListFragment {
     private void connectToConf(WifiConfiguration conf) {
         wifi.disconnect();
 
+        mConf = conf;
+        registerWiFiConnection();
+
         if(!wifi.enableNetwork(conf.networkId, true)){
             Toast.makeText(getActivity(), "Incorrect Password", Toast.LENGTH_LONG).show();
         }
@@ -490,9 +575,11 @@ public class ScanWifiFragment extends ListFragment {
 
     //Get WiFi List from Beacon
     private void getBeaconWifi() {
-        String requestPath = Application.loadServerPath();
+        final ScanActivity oParent = (ScanActivity) this.getActivity();
+
+        String requestPath = "http://"+ oParent.mBeaconIP; //Application.loadServerPath();
         requestPath += "/scan";
-        final Activity oParent = this.getActivity();
+
 
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.GET,
@@ -575,7 +662,8 @@ public class ScanWifiFragment extends ListFragment {
     }
 
     private boolean setBeaconWiFi(WiFiResult result) {
-        String requestPath = Application.loadServerPath();
+        final ScanActivity oParent = (ScanActivity) this.getActivity();
+        String requestPath = "http://"+ oParent.mBeaconIP; //Application.loadServerPath();
         requestPath += "/scan";
         final boolean[] bSuccess = {false};
 
@@ -592,7 +680,6 @@ public class ScanWifiFragment extends ListFragment {
             e.printStackTrace();
         }
 
-        final Activity oParent = this.getActivity();
         final JSONObject finalJSON = json;
 
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
