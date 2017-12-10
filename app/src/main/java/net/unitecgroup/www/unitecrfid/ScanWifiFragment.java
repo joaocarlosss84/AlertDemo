@@ -1,6 +1,7 @@
 package net.unitecgroup.www.unitecrfid;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -8,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
@@ -27,9 +29,27 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -56,9 +76,12 @@ public class ScanWifiFragment extends ListFragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    public static final int WIFIFRAGMENT = 0;
+    public static final int BEACONFRAGMENT = 1;
+
 
     // TODO: Rename and change types of parameters
-    private String mParam1;
+    private int mFragmentType;
     private String mParam2;
 
     WifiManager wifi;
@@ -68,11 +91,8 @@ public class ScanWifiFragment extends ListFragment {
     Boolean bScanning = true;
 
     List<ScanResult> mAllResults;
-    List<ScanResult> mResults;
+    List<WiFiResult> mResults;
 
-    String ITEM_KEY = "key";
-    ArrayList<HashMap<String, String>> arraylist;
-    //SimpleAdapter adapter;
     WifiListAdapter adapter;
 
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
@@ -95,10 +115,10 @@ public class ScanWifiFragment extends ListFragment {
      * @return A new instance of fragment ScanWifiFragment.
      */
     // TODO: Rename and change types and number of parameters
-    public static ScanWifiFragment newInstance(String param1, String param2) {
+    public static ScanWifiFragment newInstance(int param1, String param2) {
         ScanWifiFragment fragment = new ScanWifiFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
+        args.putInt(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
@@ -108,41 +128,41 @@ public class ScanWifiFragment extends ListFragment {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        arraylist = new ArrayList<HashMap<String, String>>();
-        HashMap<String, String> item = new HashMap<String, String>();
-        item.put(ITEM_KEY, "TEST SSID 0");
-        arraylist.add(item);
-
         mResults = new ArrayList<>();
 
-        //this.adapter = new SimpleAdapter(getActivity(), arraylist, R.layout.listview_scan_wifi_row, new String[] { ITEM_KEY }, new int[] { R.id.list_value });
         this.adapter = new WifiListAdapter(getActivity(), R.layout.listview_scan_wifi_row, mResults, wifi);
         this.setListAdapter(this.adapter);
 
         if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
+            mFragmentType = getArguments().getInt(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
 
         wifi = (WifiManager) this.getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (wifi.isWifiEnabled() == false)
-        {
-            //Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
-            Toast.makeText(getContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
-            wifi.setWifiEnabled(true);
-        }
 
-        registerScanResults();
+        if (mFragmentType == WIFIFRAGMENT) {
+            if (wifi.isWifiEnabled() == false)
+            {
+                //Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
+                wifi.setWifiEnabled(true);
+            }
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
-            //After this point you wait for callback in onRequestPermissionsResult(int, String[], int[]) overriden method
-        } else {
-            //Already Granted
-            buttonScan.setText("Scanning");
-            bScanning = true;
-            wifi.startScan();
+            registerScanResults();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                        PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
+                //After this point you wait for callback in onRequestPermissionsResult(int, String[], int[]) overriden method
+            } else {
+                //Already Granted
+                buttonScan.setText("Scanning");
+                bScanning = true;
+                wifi.startScan();
+            }
+        } else if (mFragmentType == BEACONFRAGMENT) {
+            buttonScan.setText("Scan");
+            bScanning = false;
         }
     }
 
@@ -170,6 +190,7 @@ public class ScanWifiFragment extends ListFragment {
     }
 
     private void registerWiFiConnection() {
+
         mBroadcastConnection = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -194,7 +215,7 @@ public class ScanWifiFragment extends ListFragment {
                 }
             }
         };
-        getActivity().registerReceiver(mBroadcastConnection, new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION));
+        getActivity().registerReceiver(mBroadcastConnection, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
     }
 
     @Override
@@ -216,15 +237,26 @@ public class ScanWifiFragment extends ListFragment {
                 //Uri uri = null;
                 //onButtonPressed(uri);
                 //arraylist.clear();
-                if (!bScanning) {
-                    registerScanResults();
-                    buttonScan.setText("Scanning");
-                    bScanning = true;
-                    wifi.startScan();
-                } else {
-                    bScanning = false;
-                    buttonScan.setText("Scan");
-                    unregisterScanResults();
+                if (mFragmentType == WIFIFRAGMENT) {
+                    if (!bScanning) {
+                        registerScanResults();
+                        buttonScan.setText("Scanning");
+                        bScanning = true;
+                        wifi.startScan();
+                    } else {
+                        bScanning = false;
+                        buttonScan.setText("Scan");
+                        unregisterScanResults();
+                    }
+                } else if (mFragmentType == BEACONFRAGMENT) {
+                    if (!bScanning) {
+                        buttonScan.setText("Scanning");
+                        bScanning = true;
+                        getBeaconWifi();
+                    } else {
+                        bScanning = false;
+                        buttonScan.setText("Scan");
+                    }
                 }
             }
         });
@@ -243,7 +275,6 @@ public class ScanWifiFragment extends ListFragment {
 
         try
         {
-            arraylist.clear();
             mResults.clear();
 
             for (int i = 0; i < mAllResults.size(); i++) {
@@ -255,8 +286,9 @@ public class ScanWifiFragment extends ListFragment {
                         //stores de SSID into the selected SSID and also its position from
                         //mAllResults to allow us to exchange it if necesary
                         signalStrength.put(key, i);
-                        mResults.add(result);
-                        adapter.notifyDataSetChanged();
+                        WiFiResult newResult = new WiFiResult(result);
+                        //mResults.add(result);
+                        mResults.add(newResult);
                     } else {
                         //replaces the same SSID already found by one with a stronger signals
                         int oldPosition = signalStrength.get(key);
@@ -264,14 +296,27 @@ public class ScanWifiFragment extends ListFragment {
                         int oldLevel = wifi.calculateSignalLevel(oldResult.level, 5);
 
                         if (currentLevel > oldLevel) {
-                            mResults.set(oldPosition, result);
-                            adapter.notifyDataSetChanged();
+                            WiFiResult newResult = new WiFiResult(result);
+                            //mResults.set(oldPosition, result);
+                            mResults.set(oldPosition, newResult);
                         }
                     }
                 }
             }
 
-            //adapter.notifyDataSetChanged();
+            Collections.sort(mResults, new Comparator<WiFiResult>(){
+                public int compare(WiFiResult obj1, WiFiResult obj2) {
+                    // ## Ascending order
+                    //return obj1.firstName.compareToIgnoreCase(obj2.firstName); // To compare string values
+                    //return Integer.valueOf(obj1.level).compareTo(obj2.level); // To compare integer values
+
+                    // ## Descending order
+                    // return obj2.firstName.compareToIgnoreCase(obj1.firstName); // To compare string values
+                    return Integer.valueOf(obj2.level).compareTo(obj1.level); // To compare integer values
+                }
+            });
+
+            adapter.notifyDataSetChanged();
         }
         catch (Exception e)
         {
@@ -341,8 +386,8 @@ public class ScanWifiFragment extends ListFragment {
         final EditText oEditTextPassword = (EditText) oDialogView.findViewById(R.id.editTextPassword);
         final int iWiFiPosition = position;
 
-        ScanResult sc = mResults.get(iWiFiPosition);
-        oTextViewSSID.setText(sc.SSID);
+        final WiFiResult result = mResults.get(iWiFiPosition);
+        oTextViewSSID.setText(result.SSID);
 
         AlertDialog.Builder oDialogBuilder = new AlertDialog.Builder(getActivity());
         oDialogBuilder
@@ -354,7 +399,12 @@ public class ScanWifiFragment extends ListFragment {
                             public void onClick(DialogInterface dialog, int whichButton) {
                                 //((FragmentAlertDialog)getActivity()).doPositiveClick();
                                 //Connect to WiFi
-                                connectToAP(iWiFiPosition, oEditTextPassword.getText().toString());
+                                if (mFragmentType == WIFIFRAGMENT) {
+                                    connectToAP(iWiFiPosition, oEditTextPassword.getText().toString());
+                                } else if (mFragmentType == BEACONFRAGMENT) {
+                                    result.password = oEditTextPassword.getText().toString();
+                                    setBeaconWiFi(result);
+                                }
                             }
                         }
                 )
@@ -368,17 +418,24 @@ public class ScanWifiFragment extends ListFragment {
                 );
 
         //Check if the network was previoully created, just connect
-        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
-        WifiConfiguration conf = null;
-        for (WifiConfiguration i : list) {
-            if (i.SSID != null && i.SSID.equals("\"" + sc.SSID + "\"")) {
-                conf = i;
-            }
-        }
+        if (wifi != null && mFragmentType == WIFIFRAGMENT) {
+            List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+            WifiConfiguration conf = null;
+            if (list != null & list.size() > 0) {
+                for (WifiConfiguration i : list) {
+                    if (i.SSID != null && i.SSID.equals("\"" + result.SSID + "\"")) {
+                        conf = i;
+                    }
+                }
 
-        if (conf != null) {
-            connectToConf(i);
-        } else {
+                if (conf != null) {
+                    connectToConf(conf);
+                } else {
+                    AlertDialog oAlertDialog = oDialogBuilder.create();
+                    oAlertDialog.show();
+                }
+            }
+        } else if (mFragmentType == BEACONFRAGMENT) {
             AlertDialog oAlertDialog = oDialogBuilder.create();
             oAlertDialog.show();
         }
@@ -388,7 +445,7 @@ public class ScanWifiFragment extends ListFragment {
 
         registerWiFiConnection();
 
-        ScanResult sc = mResults.get(iWiFiPosition);
+        WiFiResult sc = mResults.get(iWiFiPosition);
         String networkSSID = sc.SSID;
         String type = sc.capabilities;
 
@@ -429,5 +486,179 @@ public class ScanWifiFragment extends ListFragment {
         }
 
         wifi.reconnect();
+    }
+
+    //Get WiFi List from Beacon
+    private void getBeaconWifi() {
+        String requestPath = Application.loadServerPath();
+        requestPath += "/scan";
+        final Activity oParent = this.getActivity();
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                            if (Status == 1) {
+                                JSONArray aJSONWifi = response.getJSONArray("networks");
+                                callbackGetBeaconWifi(aJSONWifi);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        bScanning = false;
+                        buttonScan.setText("Scan");
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success on Loading Networks", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "No networks found", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on loading networks", Toast.LENGTH_LONG).show();
+                        bScanning = false;
+                        buttonScan.setText("Scan");
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+    }
+
+    private void callbackGetBeaconWifi(JSONArray aJSONWifi) {
+
+        mResults.clear();
+        for (int i = 0; i < aJSONWifi.length(); i++) {
+            try {
+                JSONObject JSONNetwork = aJSONWifi.getJSONObject(i);
+                WiFiResult newResult = new WiFiResult();
+                newResult.SSID = JSONNetwork.getString("ssid");
+                newResult.BSSID = JSONNetwork.getString("bssid");
+                newResult.RSSI = JSONNetwork.getInt("rssi");
+                newResult.level = newResult.RSSI;
+                JSONNetwork.getInt("channel");
+                //newResult.capabilities = JSONNetwork.getInt("enc");
+                mResults.add(newResult);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Collections.sort(mResults, new Comparator<WiFiResult>(){
+            public int compare(WiFiResult obj1, WiFiResult obj2) {
+                // ## Ascending order
+                //return obj1.firstName.compareToIgnoreCase(obj2.firstName); // To compare string values
+                //return Integer.valueOf(obj1.level).compareTo(obj2.level); // To compare integer values
+
+                // ## Descending order
+                // return obj2.firstName.compareToIgnoreCase(obj1.firstName); // To compare string values
+                return Integer.valueOf(obj2.level).compareTo(obj1.level); // To compare integer values
+            }
+        });
+
+        adapter.notifyDataSetChanged();
+    }
+
+    private boolean setBeaconWiFi(WiFiResult result) {
+        String requestPath = Application.loadServerPath();
+        requestPath += "/scan";
+        final boolean[] bSuccess = {false};
+
+        GsonBuilder builder = new GsonBuilder();
+        builder.excludeFieldsWithoutExposeAnnotation();
+        Gson gson = builder.create();
+
+        String gsonString = gson.toJson(result);
+        JSONObject json = null;
+
+        try {
+            json = new JSONObject(gsonString);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        final Activity oParent = this.getActivity();
+        final JSONObject finalJSON = json;
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.POST,
+                requestPath,
+                finalJSON,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success on beacon connection", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error on beacon connection", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on beacon connection", Toast.LENGTH_LONG).show();
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+
+        return bSuccess[0];
+    }
+
+    public class WiFiResult {
+        @Expose(serialize = true)
+        @SerializedName("ssid")
+        public String SSID;
+        @Expose(serialize = true)
+        public String BSSID;
+        @Expose(serialize = true)
+        public String capabilities;
+        @Expose(serialize = true)
+        public int RSSI;
+        @Expose(serialize = true)
+        public int level;
+        @Expose(serialize = true)
+        public String password;
+
+        public WiFiResult() {
+
+        }
+
+        public WiFiResult(ScanResult result) {
+            this.SSID = result.SSID;
+            this.BSSID = result.BSSID;
+            this.RSSI = result.level;
+            this.capabilities = result.capabilities;
+            this.level = result.level;
+        }
+
     }
 }

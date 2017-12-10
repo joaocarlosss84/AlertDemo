@@ -19,7 +19,7 @@ import java.util.List;
  * https://www.journaldev.com/10416/android-listview-with-custom-adapter-example-tutorial
  */
 
-public class WifiListAdapter extends ArrayAdapter<ScanResult> {
+public class WifiListAdapter extends ArrayAdapter<ScanWifiFragment.WiFiResult> {
 
     WifiManager mWifi;
 
@@ -27,7 +27,7 @@ public class WifiListAdapter extends ArrayAdapter<ScanResult> {
         super(context, resource);
     }
 
-    public WifiListAdapter(@NonNull Context context, int resource, @NonNull List<ScanResult> objects, WifiManager wifi) {
+    public WifiListAdapter(@NonNull Context context, int resource, @NonNull List<ScanWifiFragment.WiFiResult> objects, WifiManager wifi) {
         super(context, resource, objects);
         mWifi = wifi;
     }
@@ -44,7 +44,8 @@ public class WifiListAdapter extends ArrayAdapter<ScanResult> {
             v = vi.inflate(R.layout.listview_scan_wifi_row, null);
         }
 
-        ScanResult sc = getItem(position);
+        //ScanResult sc = getItem(position);
+        ScanWifiFragment.WiFiResult sc = getItem(position);
 
         if (sc != null) {
             TextView tt1 = (TextView) v.findViewById(R.id.ssid);

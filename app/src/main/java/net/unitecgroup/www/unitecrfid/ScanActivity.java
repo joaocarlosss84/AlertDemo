@@ -38,10 +38,6 @@ public class ScanActivity extends BaseActivity
      */
     private ViewPager mViewPager;
 
-    WifiManager wifi;
-    List<ScanResult> results;
-    private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -144,7 +140,9 @@ public class ScanActivity extends BaseActivity
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
             if (position == 0) {
-                return ScanWifiFragment.newInstance("Test", "wifi");
+                return ScanWifiFragment.newInstance(ScanWifiFragment.WIFIFRAGMENT, "wifi");
+            } else if (position == 1) {
+                return ScanWifiFragment.newInstance(ScanWifiFragment.BEACONFRAGMENT, "beacon");
             } else {
                 return PlaceholderFragment.newInstance(position + 1);
             }
