@@ -51,11 +51,14 @@
 #include <ArduinoJson.h>
 #include <map>
 #include <list>
+#include "EEPROM.h"
 
 extern "C" { 
   #include<user_interface.h>
 }
 
+
+#define D6PIN 12 // Hardware Reset
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
@@ -137,12 +140,18 @@ void tCallback(void *tCall){
     _timeout = true;
 }
 
+void handleHardReset() {
+  Serial.println("---->>>> HARDWARE RESET <<<------");
+
+  EEPROMErase();
+  
+}
+
 void usrInit(void){
     os_timer_setfn(&mTimer, tCallback, NULL);
     //The milliseconds parameter is the duration of the timer measured in milliseconds. The repeat parameter is whether or not the timer will restart once it has reached zero.
     os_timer_arm(&mTimer, 10000, true);    
 }
-
 
 void dumpClients() {
   Serial.print(" Clients:\r\n");
@@ -274,7 +283,19 @@ void setup() {
   //digitalWrite ( led, 0 );
 
   delay(100);
- 
+
+  EEPROMInit();
+  
+  EEPROMWriteNetwork(ssidSTA, pwdSTA);
+
+  EEPROMLoadAlerts();
+
+  pinMode(D6PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(D6PIN), handleHardReset, FALLING);
+
+  
+  //loadCredentials();
+   
   //enableWiFiSTA();
  
   enableWiFiAP();

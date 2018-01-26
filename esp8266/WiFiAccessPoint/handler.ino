@@ -122,6 +122,8 @@ void handleAlerts() {
         JsonObject& alert = *it;
         oAlert = parseAlertJson(alert);
         AlertsMap[ alert["_id"].as<int>() ] = oAlert;        
+
+        EEPROMWriteNextAlert(&oAlert);
         
         //check if the weekday is set and add it to WeekdaysList
         for (i = 0; i < 8; i++) {
@@ -146,6 +148,8 @@ void handleAlerts() {
     Serial.println("SORTED");
     
     dumpWeekdaysList();
+
+    EEPROMCommit();
    
     server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
 }

@@ -154,3 +154,4 @@ void WeekdaysListRemove(std::list<WeekAlert> &oList, WeekAlert oWeekAlert) {
   }  
 }
 
+
