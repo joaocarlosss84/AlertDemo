@@ -14,6 +14,65 @@ void returnFail(String msg) {
   server.send(500, "text/plain", msg + "\r\n");
 }
 
+void handleAPPassword() {
+  
+}
+
+void handleSetTime() {
+  String ReqJson = server.arg("plain");
+  String message = "POST received:\n";
+         message += ReqJson;
+         message += "\n";
+  
+  Serial.println(message);
+  
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& _root = jsonBuffer.parseObject(ReqJson);
+
+  //in HH:MM -> translated to minutes
+  int iTime = parseTime(_root.as<char*>());
+
+  //Copying the weekdays int[]
+  // Mon Tue Wed Thu Fri Sat Sun
+  // 2   3   4   5   6   7   1        
+  short iWeekday = _root["weekday"]; //weekday translate to seconds, Sunday 00:00 == 0sec
+
+  //Error Treatment
+  if (iTime < 0) {
+    Serial.println("SET TIME FORMAT ERROR");
+    server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Time Format Error: HH:MM\"}" );    
+    return;
+  } else if (iWeekday < 0 || iWeekday > 7) {
+    Serial.println("SET TIME WEEKDAY ERROR");
+    server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Weekday Error: Sun-1, Mon-2, Tue-3, Wed-4, Thu-5, Fri-6, Sat-7\"}" );    
+    return;
+  }
+
+  iCurrentTime = (iWeekday-1)*24*60*60 + iTime*60;
+  message = "Current Time\n";
+  message += iCurrentTime;
+  message += "\n";
+  Serial.println(message);
+
+  server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
+      
+}
+
+void handleGetTime() {
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["Status"] = 1;
+  root["timestamp"] = iCurrentTime;
+  short weekday = (iCurrentTime/(24*60*60))+1;
+  root["weekday"] = weekday;
+  int iTime = (iCurrentTime - (weekday-1)*24*60*60)/60;
+  root["time"] = convertTime(iTime); //in minutes
+  
+  String JSON;
+  root.printTo(JSON);
+  
+  server.send ( 200, "application/json", JSON );
+}
 
 void handleDeleteAlerts() {
 
@@ -292,8 +351,6 @@ void handleConnect() {
       return;
     }    
   }
-
-  
   
   //Create JSON Reply
   JsonObject& wifiJSON = jsonBuffer.createObject();
@@ -310,4 +367,3 @@ void handleConnect() {
   
   server.send ( 200, "application/json", JSON );  
 }
-

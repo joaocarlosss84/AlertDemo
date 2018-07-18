@@ -52,6 +52,17 @@ void dumpAlertsMap() {
   }
 }
 
+void dumpAlert(Alerts oAlert) {
+    Serial.println("ID: " + String( oAlert.iId ));    
+    Serial.println("TIME: " + String( oAlert.iTime ) + " = " + convertTime(oAlert.iTime));
+    Serial.println("DURATION: " + String( oAlert.iDuration ) + " = " + convertTime(oAlert.iDuration));
+    Serial.print("WEEKDAYS: ");
+    Serial.print(oAlert.bWeekdays, HEX);
+    Serial.print(" = ");
+    Serial.print(oAlert.bWeekdays, BIN);
+    Serial.println();  
+}
+
 void dumpWeekdaysList() {
   int i, iTime, iId;
   std::list<WeekAlert> oList;
@@ -100,8 +111,6 @@ Alerts parseAlertJson(JsonObject& alert) {
   iTime = iHour*60 + iMin;        
   
   sTime = alert["_duration"].as<char*>();
-  //iHour = sTime.substring(0,2).toInt();
-  //iMin = sTime.substring(3).toInt();
   iHour = sTime.substring(0,sTime.indexOf(":")).toInt();
   iMin = sTime.substring(sTime.indexOf(":")+1).toInt();
   iDuration = iHour*60 + iMin;        
@@ -123,6 +132,36 @@ Alerts parseAlertJson(JsonObject& alert) {
   
   return oAlert;
 }
+
+int parseTime(String sTime) {
+  //Parsing string time HH:MM to integer
+  if (sTime.length < 3 || sTime.length > 5)
+    return -1;
+    
+  //String sTime = alert["_time"].as<char*>();
+  short iHour = sTime.substring(0,sTime.indexOf(":")).toInt();
+  short iMin = sTime.substring(sTime.indexOf(":")+1).toInt();
+  short iTime = iHour*60 + iMin;        
+  return iTime;
+}
+
+Alerts parseTimestamp(int iTimestamp) {
+  //Parsing Timestamp in seconds to Alerts Object
+  Alerts oAlert;
+  short iWeekday = (iTimestamp/(24*60*60))+1;  
+  int iTime = (iCurrentTime - (iWeekday-1)*24*60*60)/60; //HH:MM in minutes
+  byte bWeekdays = 1 << iWeekday;
+  oAlert = (Alerts) {.iId = 0, .iTime = iTime, .iDuration = 0, .bWeekdays = bWeekdays};
+}
+
+short getWeekday(int iTimestamp) {
+  return (iTimestamp/(24*60*60))+1;
+}
+
+short getTimeInMinutes(int iTimestamp) {
+  short weekday = getWeekday(iTimestamp);
+  return (iCurrentTime - (weekday-1)*24*60*60)/60;
+} 
 
 void WeekdaysListInsert(std::list<WeekAlert> &oList, WeekAlert oWeekAlert) {
   std::list<WeekAlert>::iterator wki;

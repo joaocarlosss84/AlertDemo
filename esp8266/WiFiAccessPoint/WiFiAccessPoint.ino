@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Majenko Technologies
+ * Copyright (c) 2017, JCSS Technologies
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification,
@@ -61,6 +61,7 @@ extern "C" {
 #define D6PIN 12 // Hardware Reset
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
+#define INTERVAL_US 1000000
 
 //using namespace std;
 
@@ -97,8 +98,6 @@ IPAddress subnetSTA(255, 255, 255, 0);
 //const char *ssidSTA = "JCSSAP";
 //const char *pwdSTA = "jcss8469"; 
 
-
-
 const int led = 2;
 
 struct Alerts {
@@ -131,9 +130,68 @@ boolean bSTA_Running = false;
 int iConnectedAP = -1;
 int iChannel = 11;
 
+uint32_t iCurrentTime = 0;
 os_timer_t mTimer;
 
 bool _timeout = false;
+bool _bLEDState = false;
+
+void checkAlerts() {
+  short iWeekday = getWeekday(iCurrentTime);
+  short iNowTime = getTimeInMinutes(iCurrentTime);
+  Alerts oAlert;
+  short iON = 0;
+  
+  Serial.println("RTC Weekday:" + String(iWeekday) + " Time: " + convertTime(iNowTime));
+  
+  //Get the Alerts for this weekday
+  std::list<WeekAlert>::iterator wki = WeekdaysList[iWeekday].begin();
+  
+  //Loop the Alerts for today until the end
+  while(wki != WeekdaysList[iWeekday].end()) {
+    //Serial.println("FOUND WEEKDAY");             
+    //Get the Alert info from AlertsMap;
+    auto it = AlertsMap.find( (*wki).iId );
+    if (it != AlertsMap.end()) {      
+      oAlert = (*it).second;       
+      //Serial.println("FOUND ALERT:");             
+      //dumpAlert(oAlert);
+      
+      short startTime = (*wki).iTime;
+      short endTime = startTime + oAlert.iDuration;
+      Serial.println("\tId:"+ String(oAlert.iId) + " Start: " + convertTime(startTime) + " End: " + convertTime(endTime));             
+      if (iNowTime >= startTime && iNowTime < endTime) {
+        iON++;      
+      }
+    }
+    ++wki;     
+  }
+
+  if (iON > 0) {
+    if (_bLEDState == false) {
+      Serial.println("LED ON");             
+      _bLEDState = true;
+    }
+  } else {
+    if (_bLEDState == true) {
+      Serial.println("LED OFF");             
+      _bLEDState = false;
+    }
+  }
+
+}
+
+void inline handler (void){
+  timer0_write(ESP.getCycleCount() + INTERVAL_US * 80); // 160 when running at 160mhz
+
+  //Check Every Minute
+  if (iCurrentTime % 60 == 0) {    
+    checkAlerts();
+  }   
+
+  iCurrentTime++;
+  
+}
 
 //Nunca execute nada na interrupcao, apenas setar flags!
 void tCallback(void *tCall){
@@ -315,6 +373,9 @@ void setup() {
 	server.on("/", handleRoot);
   server.on("/scan", HTTP_GET, handleScan);
   server.on("/scan", HTTP_POST, handleConnect);
+  server.on("/password", HTTP_POST, handleAPPassword);
+  server.on("/time", HTTP_POST, handleSetTime);
+  server.on("/time", HTTP_GET, handleGetTime);
   server.on("/alerts", HTTP_GET, handleDumpAlerts);
   server.on("/alerts", HTTP_POST, handleAlerts);
   server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
@@ -327,6 +388,12 @@ void setup() {
     
 	server.begin();
 	Serial.println("HTTP server started");
+
+  noInterrupts();
+  timer0_isr_init();
+  timer0_attachInterrupt(handler);
+  timer0_write(ESP.getCycleCount() + INTERVAL_US * 80); // 160 when running at 160mhz
+  interrupts();
 
   WiFi.printDiag(Serial);
   
@@ -355,7 +422,7 @@ void loop() {
           //wifi_station_disconnect(); // ESP8266 station disconnects to the router, or ESP8266 station stops trying to connect to the target router.
       }
   }
-
+  
   yield();
   
 }
