@@ -20,13 +20,10 @@ import android.widget.TextView;
 
 import java.util.List;
 
-//https://developer.android.com/training/basics/fragments/communicating.html#Implement
-//https://stackoverflow.com/questions/5452940/how-can-i-get-android-wifi-scan-results-into-a-list
-//
-//How to switch between Fragments
-//https://developer.android.com/reference/android/support/v4/app/FragmentPagerAdapter.html
-public class ScanActivity extends BaseActivity
-        implements ScanWifiFragment.OnScanButtonListener {
+public class AlertsPageActivity extends BaseActivity
+        implements  AlertsPageFragment.OnFragmentInteractionListener,
+                    ScanWifiFragment.OnScanButtonListener,
+                    AddAlertDialog.OnAlertSavedListener {
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -43,15 +40,15 @@ public class ScanActivity extends BaseActivity
      */
     private ViewPager mViewPager;
 
-    public String mBeaconIP;
-
     private WifiInfo mWifiInfo;
     private WifiManager wifi;
+
+    private Fragment mCurrentFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_scan);
+        setContentView(R.layout.activity_alerts_page);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -69,6 +66,7 @@ public class ScanActivity extends BaseActivity
         mWifiInfo = wifi.getConnectionInfo();
     }
 
+    //Disconnect from Beacon and reconnect to previous WiFi
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -114,12 +112,6 @@ public class ScanActivity extends BaseActivity
         return super.onOptionsItemSelected(item);
     }
 
-
-    @Override
-    public void onScanButtonClicked(Uri uri) {
-        //TODO: do something with scan click from Fragment
-    }
-
     public void changeToNextFragment() {
         if (mViewPager.getCurrentItem() < mSectionsPagerAdapter.getCount()) {
             changeToFragment(mViewPager.getCurrentItem()+1);
@@ -128,6 +120,21 @@ public class ScanActivity extends BaseActivity
 
     public void changeToFragment(int iFragment) {
         mViewPager.setCurrentItem(iFragment);
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+        //TODO: do something with scan click from Fragment
+    }
+
+    @Override
+    public void onScanButtonClicked(Uri uri) {
+        //TODO: do something with scan click from Fragment
+    }
+
+    @Override
+    public void OnAlertSaved(int pos, Alert oAlert) {
+        ((AlertsPageFragment) mCurrentFragment).OnAlertSaved(pos, oAlert);
     }
 
     /**
@@ -182,16 +189,24 @@ public class ScanActivity extends BaseActivity
             if (position == 0) {
                 return ScanWifiFragment.newInstance(ScanWifiFragment.WIFIFRAGMENT, "wifi");
             } else if (position == 1) {
-                return ScanWifiFragment.newInstance(ScanWifiFragment.BEACONFRAGMENT, "beacon");
+                return AlertsPageFragment.newInstance("Alert", "wifi");
             } else {
                 return PlaceholderFragment.newInstance(position + 1);
             }
         }
 
         @Override
+        public void setPrimaryItem(ViewGroup container, int position, Object object) {
+            if (mCurrentFragment != object) {
+                mCurrentFragment = (Fragment) object;
+            }
+            super.setPrimaryItem(container, position, object);
+        }
+
+        // Show total pages.
+        @Override
         public int getCount() {
-            // Show 3 total pages.
-            return 3;
+            return 2;
         }
     }
 }

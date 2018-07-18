@@ -23,7 +23,6 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 /**
  * https://github.com/SecUSo/privacy-friendly-app-example
@@ -152,7 +151,8 @@ public abstract class BaseActivity extends AppCompatActivity implements OnNaviga
                 startActivity(intent);
                 break;
             case R.id.nav_alerts:
-                intent = new Intent(this, AlertsActivity.class);
+                //intent = new Intent(this, AlertsActivity.class);
+                intent = new Intent(this, AlertsPageActivity.class);
                 createBackStack(intent);
                 break;
 

@@ -11,7 +11,6 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -105,6 +104,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="net.unitecgroup.www.unitecrfid.MainActivity" />
         </activity>
+        <activity android:name=".AlertsPageActivity"></activity>
     </application>
 
 </manifest>
