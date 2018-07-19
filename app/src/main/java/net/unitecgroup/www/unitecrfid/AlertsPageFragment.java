@@ -18,6 +18,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
@@ -115,11 +116,30 @@ public class AlertsPageFragment extends Fragment implements
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-
-
         //mServer = new ServerCommunication(this);
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
 
+        if (id == R.id.action_addAlerts) {
+            addAlerts();
+            return true;
+        } else if (id == R.id.action_removeAlerts) {
+            removeAlerts();
+            return true;
+        } else if (id == R.id.action_updateAlerts) {
+            oAlertListAdapter.notifyDataSetChanged();
+            return true;
+        } else if (id == R.id.action_sendAlerts) {
+            sendAlerts();
+            return true;
+        } else if (id == R.id.action_getAlerts) {
+            getAlerts();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -451,6 +471,113 @@ public class AlertsPageFragment extends Fragment implements
         void onFragmentInteraction(Uri uri);
     }
 
+
+    //region ADD/REMOVE ALERTS
+    public void addAlerts() {
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        aAlerts.add(new Alert("06:30", "00:15", new ArrayList<Integer>() {{add(2); add(3); add(4); add(5);}}));
+        aAlerts.add(new Alert("12:00", "00:30", new ArrayList<Integer>() {{add(2); add(3);}}));
+        aAlerts.add(new Alert("18:30", "00:10", new ArrayList<Integer>() {{add(4); add(5); add(6);}}));
+
+        for (Alert cn : aAlerts) {
+            if (mDB.addAlert(cn) >= 0) {
+                oAlertListAdapter.addAlert(cn);
+            }
+        }
+        sendAlerts(aAlerts);
+    }
+
+    public void removeAlerts() {
+        //This will erase the DB content
+        sendDeleteAlerts();
+        mDB.deleteAll();
+        oAlertListAdapter.removeAll();
+    }
+    //endregion
+
+    //region GET ALERTS
+    private void callbackGetAlerts(JSONArray aJSAlerts) {
+        mDB.deleteAll();
+        oAlertListAdapter.removeAll();
+
+        ArrayList<Alert> aAlerts = new ArrayList<>();
+        for (int i = 0; i < aJSAlerts.length(); i++) {
+            try {
+                JSONObject JSAlert = aJSAlerts.getJSONObject(i);
+                Alert oAlert = new Alert();
+                oAlert.set_id(JSAlert.getInt("_id"));
+                oAlert.set_time(JSAlert.getInt("_time"));
+                oAlert.set_duration(JSAlert.getInt("_duration"));
+
+                ArrayList<Integer> aWeekdays = new ArrayList<>();
+                JSONArray aJSWeekdays = JSAlert.getJSONArray("Weekdays");
+                for (int j = 0; j < aJSWeekdays.length(); j++) {
+                    aWeekdays.add(aJSWeekdays.getInt(j));
+                }
+                oAlert.set_weekdays(aWeekdays);
+
+                if (mDB.addAlert(oAlert) >= 0) {
+                    oAlertListAdapter.addAlert(oAlert);
+                }
+
+                //aAlerts.add(oAlert);
+                //Gson gson = new Gson();
+                //Alert oAlert = (Alert) gson.fromJson(JSAlert, Alert.class);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+    }
+
+    private void getAlerts() {
+        String requestPath = Application.loadServerPath();
+        final Activity oParent = this.getActivity();
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                            if (Status == 1) {
+                                JSONArray aJSAlerts = response.getJSONArray("alerts");
+                                callbackGetAlerts(aJSAlerts);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success on Loading Alerts", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "No Alerts to be loaded", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+    }
+    //endregion
+
     //region SEND_ALERTS
     private boolean sendAlerts() {
         return sendAlerts(new ArrayList<Alert>());
@@ -527,8 +654,6 @@ public class AlertsPageFragment extends Fragment implements
         return bSuccess[0];
     }
     //endregion
-
-
 
     //region DELETE_ALERTS
     public void returnDeleteAlerts(ArrayList<Alert> aAlerts, boolean bSuccess) {

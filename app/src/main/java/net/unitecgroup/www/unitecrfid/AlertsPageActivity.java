@@ -86,14 +86,15 @@ public class AlertsPageActivity extends BaseActivity
 
     @Override
     protected int getNavigationDrawerID() {
-        return R.id.nav_scan;
+        return R.id.nav_alerts;
     }
 
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_scan, menu);
+        //getMenuInflater().inflate(R.menu.menu_scan, menu);
+        getMenuInflater().inflate(R.menu.alerts, menu);
         return true;
     }
 
@@ -105,8 +106,8 @@ public class AlertsPageActivity extends BaseActivity
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (mCurrentFragment instanceof AlertsPageFragment ) {
+            mCurrentFragment.onOptionsItemSelected(item);
         }
 
         return super.onOptionsItemSelected(item);
