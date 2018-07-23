@@ -58,7 +58,12 @@ extern "C" {
 }
 
 
+#define D1PIN 05 // 
+#define D2PIN 04 // 
 #define D6PIN 12 // Hardware Reset
+
+#define FANPIN D1PIN
+#define LEDPIN D2PIN //
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define INTERVAL_US 1000000
@@ -83,22 +88,20 @@ IPAddress gatewayAP(192, 168, 1, 1); //default value
 
 
 
-String ssidSTA = "UNITEC_VISITANTES";
-String pwdSTA = "Bem-vindo!"; 
+//String ssidSTA = "UNITEC_VISITANTES";
+//String pwdSTA = "Bem-vindo!"; 
 IPAddress ipSTA(10, 23, 5, 201);
 IPAddress gatewaySTA(10, 23, 1, 1);
 IPAddress subnetSTA(255, 255, 255, 0);
 
-//const char *ssidSTA = "UNITEC_USUARIOS";
-//const char *pwdSTA = "#4tva82015"; 
+//String ssidSTA = "UNITEC_USUARIOS";
+//String pwdSTA = "#4tva82015"; 
 
-//const char *ssidSTA = "GVT-7B39";
-//const char *pwdSTA = "0071749692"; 
+String ssidSTA = "GVT-7B39";
+String pwdSTA = "0071749692"; 
 
-//const char *ssidSTA = "JCSSAP";
-//const char *pwdSTA = "jcss8469"; 
-
-const int led = 2;
+//String ssidSTA = "JCSSAP";
+//String pwdSTA = "jcss8469"; 
 
 struct Alerts {
   Alerts() : iId(0), iTime(0), iDuration(0), bWeekdays(0) {}
@@ -171,11 +174,13 @@ void checkAlerts() {
     if (_bLEDState == false) {
       Serial.println("LED ON");             
       _bLEDState = true;
+      digitalWrite(FANPIN, _bLEDState);
     }
   } else {
     if (_bLEDState == true) {
       Serial.println("LED OFF");             
       _bLEDState = false;
+      digitalWrite(FANPIN, _bLEDState);
     }
   }
 
@@ -337,9 +342,6 @@ void setup() {
 
   WiFi.mode(WIFI_AP_STA);
 
-  //pinMode ( led, OUTPUT );
-  //digitalWrite ( led, 0 );
-
   delay(100);
 
   EEPROMInit();
@@ -351,6 +353,18 @@ void setup() {
   pinMode(D6PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(D6PIN), handleHardReset, FALLING);
 
+  pinMode(FANPIN, OUTPUT);
+  digitalWrite(FANPIN, 0);
+
+  pinMode(LEDPIN, OUTPUT);
+  digitalWrite(LEDPIN, 0);
+
+  //DEBUGING WAKEUP
+  for(int i=0; i<10; i++) {
+    digitalWrite(LEDPIN, (i%2 == 0));
+    delay(500);
+  }
+  digitalWrite(LEDPIN, 0);
   
   //loadCredentials();
    

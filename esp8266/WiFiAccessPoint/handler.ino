@@ -1,3 +1,5 @@
+// Using ArduinoJson 5.11
+#include <ArduinoJson.h>
 
 bool compFirst(const WeekAlert & a, const WeekAlert & b) {
   return a.iTime < b.iTime;
@@ -28,9 +30,9 @@ void handleSetTime() {
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
-
+  String sTime = _root["_time"].as<char*>();
   //in HH:MM -> translated to minutes
-  int iTime = parseTime(_root.as<char*>());
+  int iTime = parseTime( sTime );
 
   //Copying the weekdays int[]
   // Mon Tue Wed Thu Fri Sat Sun

@@ -14,18 +14,13 @@ void dumpJsonObject(JsonObject& obj) {
 
 
 String convertTime(int iTime) {
-  int iHour, iMin, i;
-  iHour = iTime/60;
-  iMin = iTime%60;
   char cTime[6];  //buffer used to format a line (+1 is for trailing 0)
-  sprintf(cTime,"%02d:%02d",iHour, iMin);   
-
+  sprintf(cTime,"%02d:%02d",iTime/60, iTime%60);   
   return String(cTime);
 }
 
 void dumpAlertsMap() {
   //std::map<int, Alerts>::iterator i
-  int iHour, iMin, i;
   
   for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
     Alerts alert = (*it).second;
@@ -135,7 +130,7 @@ Alerts parseAlertJson(JsonObject& alert) {
 
 int parseTime(String sTime) {
   //Parsing string time HH:MM to integer
-  if (sTime.length < 3 || sTime.length > 5)
+  if (sTime.length() < 3 || sTime.length() > 5)
     return -1;
     
   //String sTime = alert["_time"].as<char*>();
@@ -152,6 +147,7 @@ Alerts parseTimestamp(int iTimestamp) {
   int iTime = (iCurrentTime - (iWeekday-1)*24*60*60)/60; //HH:MM in minutes
   byte bWeekdays = 1 << iWeekday;
   oAlert = (Alerts) {.iId = 0, .iTime = iTime, .iDuration = 0, .bWeekdays = bWeekdays};
+  return oAlert;
 }
 
 short getWeekday(int iTimestamp) {

@@ -168,10 +168,10 @@ bool EEPROMWriteNetwork(String network, String password) {
     aPwd[32] = '\0';
     
     Serial.println("Network: '" + network + "' == '" + aNet + "'");
-    Serial.println("Password: '" + password + "' == '" + aPwd + "'");
-    
+    Serial.println("Password: '" + password + "' == '" + aPwd + "'");    
         
     //EEPROM.write(address, four);
+    return true;
   } 
 }
 
