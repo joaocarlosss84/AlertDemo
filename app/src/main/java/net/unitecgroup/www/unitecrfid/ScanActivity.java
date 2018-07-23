@@ -26,7 +26,8 @@ import java.util.List;
 //How to switch between Fragments
 //https://developer.android.com/reference/android/support/v4/app/FragmentPagerAdapter.html
 public class ScanActivity extends BaseActivity
-        implements ScanWifiFragment.OnScanButtonListener {
+        implements  ScanWifiFragment.OnScanButtonListener,
+                    ScanWifiFragment.OnBeaconConnectedListener {
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -74,14 +75,16 @@ public class ScanActivity extends BaseActivity
         super.onDestroy();
 
         //Restore the previous WiFi Connection
-        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
-        for (WifiConfiguration conf : list) {
-            //"\"" + networkSSID + "\""
-            if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
-                wifi.disconnect();
-                wifi.enableNetwork(conf.networkId, true);
-                wifi.reconnect();
-                break;
+        if (wifi != null) {
+            List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+            for (WifiConfiguration conf : list) {
+                //"\"" + networkSSID + "\""
+                if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
+                    wifi.disconnect();
+                    wifi.enableNetwork(conf.networkId, true);
+                    wifi.reconnect();
+                    break;
+                }
             }
         }
     }
@@ -128,6 +131,13 @@ public class ScanActivity extends BaseActivity
 
     public void changeToFragment(int iFragment) {
         mViewPager.setCurrentItem(iFragment);
+    }
+
+    @Override
+    public void OnBeaconConnected(String sBeaconIP) {
+        //unregisterWiFiConnection();
+        mBeaconIP = sBeaconIP;
+        changeToNextFragment();
     }
 
     /**

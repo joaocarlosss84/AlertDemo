@@ -21,6 +21,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
@@ -36,7 +37,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -138,8 +141,20 @@ public class AlertsPageFragment extends Fragment implements
         } else if (id == R.id.action_getAlerts) {
             getAlerts();
             return true;
+        } else if (id == R.id.action_setTime) {
+            setTime();
+            return true;
+        } else if (id == R.id.action_getTime) {
+            getTime();
+            return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        getAlerts();
     }
 
     @Override
@@ -527,8 +542,6 @@ public class AlertsPageFragment extends Fragment implements
                 e.printStackTrace();
             }
         }
-
-
     }
 
     private void getAlerts() {
@@ -761,4 +774,130 @@ public class AlertsPageFragment extends Fragment implements
         return bSuccess[0];
     }
     //endregion
+
+    private void callbackGetTime(JSONObject oJS) {
+         /*
+        "timestamp": 8487,
+        "weekday": 1,
+        "time": "02:21"
+        */
+
+        try {
+            int iTimestamp = oJS.getInt("timestamp");
+            String sTime = oJS.getString("time");
+            int iWeekday = oJS.getInt("weekday");
+
+            TextView textView = (TextView) this.getView().findViewById(R.id.textViewTime);
+            textView.setText(sTime);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void getTime() {
+        final AlertsPageActivity oParent = (AlertsPageActivity) this.getActivity();
+        String requestPath = "http://"+ oParent.mBeaconIP + "/time";
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                            if (Status == 1) {
+                                callbackGetTime(response);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success Getting Time", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error on Getting Time", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+    }
+
+    private boolean setTime() {
+        final boolean[] bSuccess = {false};
+
+        final AlertsPageActivity oParent = (AlertsPageActivity) this.getActivity();
+        String requestPath = "http://"+ oParent.mBeaconIP + "/time";
+
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat mdformat = new SimpleDateFormat("HH:mm");
+
+        JSONObject json = null;
+        int iWeekday = calendar.get(Calendar.DAY_OF_WEEK);
+        String sTime = mdformat.format(calendar.getTime());
+
+        try {
+            json = new JSONObject();
+            json.put("weekday", iWeekday);
+            json.put("_time", sTime);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.POST,
+                requestPath,
+                json,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            int Status = response.getInt("Status");
+                            bSuccess[0] = (Status == 1);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (bSuccess[0]) {
+                            Toast.makeText(oParent, "Success Setting Time", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error on Setting Time", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error on Setting Time", Toast.LENGTH_LONG).show();
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue(); //Volley.newRequestQueue(this);
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
+
+        return bSuccess[0];
+    }
 }

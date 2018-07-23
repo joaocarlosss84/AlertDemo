@@ -101,7 +101,8 @@ public class ScanWifiFragment extends ListFragment {
 
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 1001;
 
-    private OnScanButtonListener mListener;
+    private OnScanButtonListener mScanButtonListener;
+    private OnBeaconConnectedListener mBeaconConnectedListener;
     private BroadcastReceiver mBroadcastScan;
     private BroadcastReceiver mBroadcastConnection;
 
@@ -242,9 +243,11 @@ public class ScanWifiFragment extends ListFragment {
                         if (info.getSSID().equals(mConf.SSID)) {
                             DhcpInfo dinfo = wifi.getDhcpInfo();
                             Log.i("NETWORKSTATECHANGED", "info: "+ dinfo.toString()+"");
-                            ScanActivity oParent = (ScanActivity) getActivity();
-                            oParent.mBeaconIP = intToIp(dinfo.serverAddress);
-                            gotoBeaconFragment();
+
+                            if(mBeaconConnectedListener != null) {
+                                mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress));
+                            }
+
                         }
                     } else if (aState == NetworkInfo.DetailedState.DISCONNECTING) {
                         Log.d("wifiSupplicanState", "DISCONNECTING");
@@ -290,9 +293,11 @@ public class ScanWifiFragment extends ListFragment {
                     (ip >> 24 & 0xff));
     }
 
-    private void unregisterWiFiConnection() {
-        getActivity().unregisterReceiver(mBroadcastConnection);
-        mBroadcastConnection = null;
+    public void unregisterWiFiConnection() {
+        if (mBroadcastConnection != null) {
+            getActivity().unregisterReceiver(mBroadcastConnection);
+            mBroadcastConnection = null;
+        }
     }
 
     @Override
@@ -403,8 +408,8 @@ public class ScanWifiFragment extends ListFragment {
 
     // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onScanButtonClicked(uri);
+        if (mScanButtonListener != null) {
+            mScanButtonListener.onScanButtonClicked(uri);
         }
     }
 
@@ -412,17 +417,31 @@ public class ScanWifiFragment extends ListFragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         if (context instanceof OnScanButtonListener) {
-            mListener = (OnScanButtonListener) context;
+            mScanButtonListener = (OnScanButtonListener) context;
         } else {
             throw new RuntimeException(context.toString()
                     + " must implement OnScanButtonListener");
+        }
+        if (context instanceof OnBeaconConnectedListener) {
+            mBeaconConnectedListener = (OnBeaconConnectedListener) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement OnBeaconConnectedListener");
         }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+        unregisterWiFiConnection();
+        mScanButtonListener = null;
+        mBeaconConnectedListener = null;
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        unregisterWiFiConnection();
     }
 
     /**
@@ -438,6 +457,14 @@ public class ScanWifiFragment extends ListFragment {
     public interface OnScanButtonListener {
         // TODO: Update argument type and name
         void onScanButtonClicked(Uri uri);
+    }
+
+    /**
+     * Everytime the beacon WiFi connection is a success, call this callback
+     */
+    public interface OnBeaconConnectedListener {
+        // TODO: Update argument type and name
+        void OnBeaconConnected(String sBeaconIP);
     }
 
     @Override

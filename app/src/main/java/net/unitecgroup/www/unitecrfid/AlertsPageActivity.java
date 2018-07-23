@@ -23,6 +23,7 @@ import java.util.List;
 public class AlertsPageActivity extends BaseActivity
         implements  AlertsPageFragment.OnFragmentInteractionListener,
                     ScanWifiFragment.OnScanButtonListener,
+                    ScanWifiFragment.OnBeaconConnectedListener,
                     AddAlertDialog.OnAlertSavedListener {
 
     /**
@@ -44,15 +45,16 @@ public class AlertsPageActivity extends BaseActivity
     private WifiManager wifi;
 
     private Fragment mCurrentFragment;
+    public String mBeaconIP;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alerts_page);
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        //setSupportActionBar(toolbar);
+        //getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
@@ -72,14 +74,16 @@ public class AlertsPageActivity extends BaseActivity
         super.onDestroy();
 
         //Restore the previous WiFi Connection
-        List<WifiConfiguration> list = wifi.getConfiguredNetworks();
-        for (WifiConfiguration conf : list) {
-            //"\"" + networkSSID + "\""
-            if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
-                wifi.disconnect();
-                wifi.enableNetwork(conf.networkId, true);
-                wifi.reconnect();
-                break;
+        if (wifi != null) {
+            List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+            for (WifiConfiguration conf : list) {
+                //"\"" + networkSSID + "\""
+                if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
+                    wifi.disconnect();
+                    wifi.enableNetwork(conf.networkId, true);
+                    wifi.reconnect();
+                    break;
+                }
             }
         }
     }
@@ -136,6 +140,12 @@ public class AlertsPageActivity extends BaseActivity
     @Override
     public void OnAlertSaved(int pos, Alert oAlert) {
         ((AlertsPageFragment) mCurrentFragment).OnAlertSaved(pos, oAlert);
+    }
+
+    @Override
+    public void OnBeaconConnected(String sBeaconIP) {
+        mBeaconIP = sBeaconIP;
+        changeToNextFragment();
     }
 
     /**

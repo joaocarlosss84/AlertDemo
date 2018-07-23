@@ -31,5 +31,14 @@
         android:orderInCategory="100"
         android:title="@string/action_getAlerts"
         app:showAsAction="never" />
-
+    <item
+        android:id="@+id/action_setTime"
+        android:orderInCategory="100"
+        android:title="@string/action_setTime"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_getTime"
+        android:orderInCategory="100"
+        android:title="@string/action_getTime"
+        app:showAsAction="never" />
 </menu>
