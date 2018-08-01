@@ -26,7 +26,7 @@ void handleSetTime() {
          message += ReqJson;
          message += "\n";
   
-  Serial.println(message);
+  sprintln(message);
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -38,23 +38,28 @@ void handleSetTime() {
   // Mon Tue Wed Thu Fri Sat Sun
   // 2   3   4   5   6   7   1        
   short iWeekday = _root["weekday"]; //weekday translate to seconds, Sunday 00:00 == 0sec
-
+  int iCurrentTimeRecv = _root["timestamp"];
+    
   //Error Treatment
   if (iTime < 0) {
-    Serial.println("SET TIME FORMAT ERROR");
+    sprintln("SET TIME FORMAT ERROR");
     server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Time Format Error: HH:MM\"}" );    
     return;
   } else if (iWeekday < 0 || iWeekday > 7) {
-    Serial.println("SET TIME WEEKDAY ERROR");
+    sprintln("SET TIME WEEKDAY ERROR");
     server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Weekday Error: Sun-1, Mon-2, Tue-3, Wed-4, Thu-5, Fri-6, Sat-7\"}" );    
     return;
   }
 
-  iCurrentTime = (iWeekday-1)*24*60*60 + iTime*60;
+  if (iCurrentTimeRecv) {
+    iCurrentTime = iCurrentTimeRecv;
+  } else {
+    iCurrentTime = (iWeekday-1)*24*60*60 + iTime*60;
+  }  
   message = "Current Time\n";
   message += iCurrentTime;
   message += "\n";
-  Serial.println(message);
+  sprintln(message);
 
   server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
@@ -93,7 +98,7 @@ void handleDeleteAlerts() {
       message += server.header(i) + "\n";      
     } 
 
-    Serial.println(message);
+    sprintln(message);
  
   if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
     //Check if body received
@@ -108,7 +113,7 @@ void handleDeleteAlerts() {
          message += ReqJson;
          message += "\n";
   
-  Serial.println(message);
+  sprintln(message);
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -120,13 +125,13 @@ void handleDeleteAlerts() {
   for(JsonArray::iterator jsonIt=alerts.begin(); jsonIt!=alerts.end(); ++jsonIt) {
         
     JsonObject& alert = *jsonIt;    
-    Serial.println("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
+    sprintln("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
     
     auto it = AlertsMap.find( alert["_id"].as<int>() );
     
     if (it != AlertsMap.end()) {
       oAlert = (*it).second;
-      Serial.println("DELETING ID: " + String(oAlert.iId) );
+      sprintln("DELETING ID: " + String(oAlert.iId) );
     
       //search for Alert Id inside weekdaysList to remove it
       for (i = 0; i < 8; i++) {
@@ -135,17 +140,17 @@ void handleDeleteAlerts() {
           wki = WeekdaysList[i].begin();
                               
           //iterate in all values inside the week
-          Serial.print("DELETING WEEKDAYs: ");
+          sprint("DELETING WEEKDAYs: ");
           while(wki != WeekdaysList[i].end()) {
             if ((*wki).iId == oAlert.iId ) {
               //get out of the loop
-              Serial.print(String(i) + " ");
+              sprint(String(i) + " ");
               wki = WeekdaysList[i].erase(wki);
               break;
             }
             ++wki;
           }
-          Serial.println(); 
+          sprintln(); 
         }            
       }
 
@@ -154,7 +159,7 @@ void handleDeleteAlerts() {
       server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
     } else {
-      Serial.println("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
+      sprintln("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
       server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
     }    
   }
@@ -169,7 +174,7 @@ void handleAlerts() {
            message += ReqJson;
            message += "\n";
 
-    Serial.println(message);
+    sprintln(message);
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -206,7 +211,7 @@ void handleAlerts() {
       WeekdaysList[i].sort(compFirst);          
     }
 
-    Serial.println("SORTED");
+    sprintln("SORTED");
     
     dumpWeekdaysList();
 
@@ -274,7 +279,7 @@ void handleNotFound() {
 
 //Scan WiFi Networks
 void handleScan() {
-  Serial.println("WiFi Scan start");
+  sprintln("WiFi Scan start");
 
   // WiFi.scanNetworks will return the number of networks found
   int n = WiFi.scanNetworks();
@@ -284,27 +289,29 @@ void handleScan() {
   //wifiJSON = jsonBuffer.createObject();
   JsonArray& networks = wifiJSON.createNestedArray("networks");
 
-  Serial.println("WiFi Scan done");
+  sprintln("WiFi Scan done");
   if (n == 0) {
     wifiJSON["Status"] = 0;
-    Serial.println("No networks found");
+    sprintln("No networks found");
   } else {
     wifiJSON["Status"] = 1;
-    Serial.printf("%d networks found\n", n);
+    sprint(n);
+    sprintln(" networks found");
     for (int i = 0; i < n; ++i)
     {
       // Print SSID and RSSI for each network found
       
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(WiFi.SSID(i));
-      Serial.print(": ");
-      Serial.print(WiFi.BSSIDstr(i));
-      Serial.printf(" Channel: %d ", WiFi.channel(i) );            
-      Serial.print(" (");
-      Serial.print(WiFi.RSSI(i));
-      Serial.print(")");
-      Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+      sprint(i + 1);
+      sprint(": ");
+      sprint(WiFi.SSID(i));
+      sprint(": ");
+      sprint(WiFi.BSSIDstr(i));
+      sprint(" Channel: ")
+      sprint(WiFi.channel(i));            
+      sprint(" (");
+      sprint(WiFi.RSSI(i));
+      sprint(")");
+      sprintln((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
       delay(10);
       
       JsonObject& JsonNetwork = jsonBuffer.createObject();
@@ -326,14 +333,14 @@ void handleScan() {
 
 //Connect to a previous Wifi
 void handleConnect() {
-  Serial.println("WiFi Connection start");
+  sprintln("WiFi Connection start");
 
   String ReqJson = server.arg("plain");
   String message = "POST received:\n";
          message += ReqJson;
          message += "\n";
 
-  Serial.println(message);
+  sprintln(message);
   //Parse JSON Packet
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
