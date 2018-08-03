@@ -16,6 +16,12 @@
         tools:context=".AlertsPageFragment"
         tools:showIn="@layout/app_bar_main">
 
+        <TextView
+            android:id="@+id/textViewBeacon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DeviceName" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

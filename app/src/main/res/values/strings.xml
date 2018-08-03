@@ -36,4 +36,5 @@
     <string name="action_setTime">Set Time</string>
     <string name="TimePattern">HH:MM</string>
     <string name="Time">Time</string>
+    <string name="password">password</string>
 </resources>

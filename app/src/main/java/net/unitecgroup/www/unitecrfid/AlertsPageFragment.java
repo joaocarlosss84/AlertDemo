@@ -82,6 +82,7 @@ public class AlertsPageFragment extends Fragment implements
     static AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
     DatabaseTable mDB;
+    TextView oTVBeaconName;
 
 
     public AlertsPageFragment() {
@@ -154,7 +155,13 @@ public class AlertsPageFragment extends Fragment implements
     @Override
     public void onResume() {
         super.onResume();
-        getAlerts();
+        AlertsPageActivity oParent = (AlertsPageActivity) getActivity();
+
+        if (oParent.mBeaconIP != "") {
+            oTVBeaconName.setText(oParent.mBeaconName);
+            getAlerts();
+            getTime();
+        }
     }
 
     @Override
@@ -165,6 +172,8 @@ public class AlertsPageFragment extends Fragment implements
 
         //fm = getSupportFragmentManager();
         fm = getFragmentManager();
+
+        oTVBeaconName = (TextView) rootView.findViewById(R.id.textViewBeacon);
 
         //Floating Action Button
         fab = (FloatingActionButton) rootView.findViewById(R.id.fab);

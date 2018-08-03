@@ -245,7 +245,7 @@ public class ScanWifiFragment extends ListFragment {
                             Log.i("NETWORKSTATECHANGED", "info: "+ dinfo.toString()+"");
 
                             if(mBeaconConnectedListener != null) {
-                                mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress));
+                                mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress), mConf.SSID);
                             }
 
                         }
@@ -464,7 +464,7 @@ public class ScanWifiFragment extends ListFragment {
      */
     public interface OnBeaconConnectedListener {
         // TODO: Update argument type and name
-        void OnBeaconConnected(String sBeaconIP);
+        void OnBeaconConnected(String sBeaconIP, String sBeaconName);
     }
 
     @Override

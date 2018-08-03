@@ -134,7 +134,7 @@ public class ScanActivity extends BaseActivity
     }
 
     @Override
-    public void OnBeaconConnected(String sBeaconIP) {
+    public void OnBeaconConnected(String sBeaconIP, String sBeaconName) {
         //unregisterWiFiConnection();
         mBeaconIP = sBeaconIP;
         changeToNextFragment();

@@ -10,7 +10,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,6 +45,7 @@ public class AlertsPageActivity extends BaseActivity
 
     private Fragment mCurrentFragment;
     public String mBeaconIP;
+    public String mBeaconName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,8 +143,9 @@ public class AlertsPageActivity extends BaseActivity
     }
 
     @Override
-    public void OnBeaconConnected(String sBeaconIP) {
+    public void OnBeaconConnected(String sBeaconIP, String sBeaconName) {
         mBeaconIP = sBeaconIP;
+        mBeaconName = sBeaconName;
         changeToNextFragment();
     }
 
