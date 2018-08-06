@@ -52,21 +52,11 @@
 #include <map>
 #include <list>
 #include "EEPROM.h"
+#include "DebugFunctions.h"
 
 extern "C" { 
   #include<user_interface.h>
 }
-
-#define DEBUG 0
-
-#if DEBUG
-#define sprintln(a) (Serial.println(a))
-#define sprint(a) (Serial.print(a))
-#else
-#define sprintln(a)
-#define sprint(a)
-#endif
-
 
 #define D1PIN 05 // 
 #define D2PIN 04 // 
@@ -145,6 +135,7 @@ std::list<WeekAlert> WeekdaysList[8];
 ESP8266WebServer server(80);
 boolean bAP_Running = false;
 boolean bSTA_Running = false;
+boolean bCheckedAlerts = false;
 int iConnectedAP = -1;
 int iChannel = 11;
 
@@ -160,24 +151,24 @@ void checkAlerts() {
   Alerts oAlert;
   short iON = 0;
   
-  sprintln("RTC Weekday:" + String(iWeekday) + " Time: " + convertTime(iNowTime));
+  DEBUG_PRINTLN("RTC Weekday:" + String(iWeekday) + " Time: " + convertTime(iNowTime));
   
   //Get the Alerts for this weekday
   std::list<WeekAlert>::iterator wki = WeekdaysList[iWeekday].begin();
   
   //Loop the Alerts for today until the end
   while(wki != WeekdaysList[iWeekday].end()) {
-    //sprintln("FOUND WEEKDAY");             
+    //DEBUG_PRINTLN("FOUND WEEKDAY");             
     //Get the Alert info from AlertsMap;
     auto it = AlertsMap.find( (*wki).iId );
     if (it != AlertsMap.end()) {      
       oAlert = (*it).second;       
-      //sprintln("FOUND ALERT:");             
+      //DEBUG_PRINTLN("FOUND ALERT:");             
       //dumpAlert(oAlert);
       
       short startTime = (*wki).iTime;
       short endTime = startTime + oAlert.iDuration;
-      sprintln("\tId:"+ String(oAlert.iId) + " Start: " + convertTime(startTime) + " End: " + convertTime(endTime));             
+      DEBUG_PRINTLN("\tId:"+ String(oAlert.iId) + " Start: " + convertTime(startTime) + " End: " + convertTime(endTime));             
       if (iNowTime >= startTime && iNowTime < endTime) {
         iON++;      
       }
@@ -187,7 +178,7 @@ void checkAlerts() {
 
   if (iON > 0) {
     if (_bLEDState == false) {
-      sprintln("FAN ON");             
+      DEBUG_PRINTLN("FAN ON");             
       _bLEDState = true;
       digitalWrite(FANPIN, _bLEDState);
       Serial.write(relON, sizeof(relON));     // turns the relay ON
@@ -195,7 +186,7 @@ void checkAlerts() {
     }
   } else {
     if (_bLEDState == true) {
-      sprintln("FAN OFF");                   
+      DEBUG_PRINTLN("FAN OFF");                   
       _bLEDState = false;
       digitalWrite(FANPIN, _bLEDState);
       Serial.write(relOFF, sizeof(relOFF));     // turns the relay relOFF
@@ -210,7 +201,8 @@ void inline handler (void){
 
   //Check Every Minute
   if (iCurrentTime % 60 == 0) {    
-    checkAlerts();
+    //checkAlerts();
+    bCheckedAlerts = false;
   }   
 
   iCurrentTime++;
@@ -223,7 +215,7 @@ void tCallback(void *tCall){
 }
 
 void handleHardReset() {
-  sprintln("---->>>> HARDWARE RESET <<<------");
+  DEBUG_PRINTLN("---->>>> HARDWARE RESET <<<------");
 
   EEPROMErase();
   
@@ -236,16 +228,16 @@ void usrInit(void){
 }
 
 void dumpClients() {
-  sprint(" Clients:\r\n");
+  DEBUG_PRINT(" Clients:\r\n");
   struct station_info *stat_info = wifi_softap_get_station_info();
   IPAddress address;
   struct ip_addr *pIPaddress;
   while (stat_info != NULL) {
     pIPaddress = &stat_info->ip;
     address = pIPaddress->addr;
-    sprint("\t");
-    sprint(address);
-    sprint("\r\n");
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(address);
+    DEBUG_PRINT("\r\n");
     stat_info = STAILQ_NEXT(stat_info, next);
   } 
 }
@@ -255,7 +247,7 @@ bool enableWiFiSTA() {
   sHostname.replace(":","");
   sHostname = "ESP" + sHostname.substring(sHostname.length()-4, sHostname.length());
     
-  sprintln("Configuring WiFi Point: "  + ssidSTA + " Password: " + pwdSTA + " hostname: " + sHostname);
+  DEBUG_PRINTLN("Configuring WiFi Point: "  + ssidSTA + " Password: " + pwdSTA + " hostname: " + sHostname);
     
   //start timer
   usrInit();
@@ -267,32 +259,32 @@ bool enableWiFiSTA() {
   IPAddress emptyIp(0,0,0,0);
   if (ipSTA != emptyIp) {    
     WiFi.config(ipSTA, gatewaySTA, subnetSTA);
-    sprint("Configuring WiFi IP: "); 
-    sprint(ipSTA);
-    sprint(" Gateway: "); 
-    sprint(gatewaySTA);
-    sprint(" Subnet: "); 
-    sprintln(subnetSTA);    
+    DEBUG_PRINT("Configuring WiFi IP: "); 
+    DEBUG_PRINT(ipSTA);
+    DEBUG_PRINT(" Gateway: "); 
+    DEBUG_PRINT(gatewaySTA);
+    DEBUG_PRINT(" Subnet: "); 
+    DEBUG_PRINTLN(subnetSTA);    
   }
     
   if (WiFi.status() != WL_CONNECTED) 
     WiFi.begin(ssidSTA.c_str(), pwdSTA.c_str());
   
-  sprintln("Connecting STA WiFi");
+  DEBUG_PRINTLN("Connecting STA WiFi");
   int timeout = 20;
   while (WiFi.status() != WL_CONNECTED && !_timeout) {
     delay(500);
-    sprint(".");
+    DEBUG_PRINT(".");
     //timeout--;
   }
-  sprintln();
+  DEBUG_PRINTLN();
   if (WiFi.status() == WL_CONNECTED) {
     //mySTA_IP = WiFi.localIP();
-    sprint("Connected, IP address: ");
-    sprintln(WiFi.localIP());    
+    DEBUG_PRINT("Connected, IP address: ");
+    DEBUG_PRINTLN(WiFi.localIP());    
     bSTA_Running = true;
   } else {
-    sprintln("Error connecting to WiFi");
+    DEBUG_PRINTLN("Error connecting to WiFi");
     bSTA_Running = false;
   }
 
@@ -305,57 +297,57 @@ void enableWiFiAP() {
   sMAC.replace(":","");  
   String sAP = ssidAP + sMAC.substring(sMAC.length()-4, sMAC.length());
     
-  sprintln("Configuring Access Point: "  + String(sAP) + " Password: " + String(pwdAP));
+  DEBUG_PRINTLN("Configuring Access Point: "  + String(sAP) + " Password: " + String(pwdAP));
   
   //WiFi.softAPConfig(apIP, mySTA_IP, NMask);
   
   //if (!WiFi.softAP(ssidAP, pwdAP)) {
   if (!WiFi.softAP(sAP.c_str(), pwdAP)) {
-    sprintln("Problems to create AP");    
+    DEBUG_PRINTLN("Problems to create AP");    
     bAP_Running = false;
   } else {
     bAP_Running = true;
     ipAP = WiFi.softAPIP();
-    sprint("AP IP address: ");
-    sprintln(ipAP);  
-    sprintf("MAC address = %s\n", WiFi.softAPmacAddress().c_str());    
+    DEBUG_PRINT("AP IP address: ");
+    DEBUG_PRINTLN(ipAP);  
+    DEBUG_PRINT("MAC address = ");
+    DEBUG_PRINTLN(WiFi.softAPmacAddress().c_str());    
   }  
 }
 
 
 void scanWiFi() {
-  sprintln("scan start");
+  DEBUG_PRINTLN("scan start");
 
   // WiFi.scanNetworks will return the number of networks found
   int n = WiFi.scanNetworks();
   char* ssidAux;
   
-  sprintln("scan done");
-  if (n == 0)
-    sprintln("no networks found");
-  else
-  {
-    sprint(n);
-    sprintln(" networks found");
+  DEBUG_PRINTLN("scan done");
+  if (n == 0) {
+    DEBUG_PRINTLN("no networks found");
+  } else {
+    DEBUG_PRINT(n);
+    DEBUG_PRINTLN(" networks found");
     for (int i = 0; i < n; ++i)
     {
       // Print SSID and RSSI for each network found
-      sprint(i + 1);
-      sprint(": ");
-      sprint(WiFi.SSID(i));
-      sprint(": ");
-      sprint(WiFi.BSSIDstr(i));
-      sprint(" Channel: ");
-      sprint(WiFi.channel(i));
-      sprint(" (");
-      sprint(WiFi.RSSI(i));
-      sprint(")");
-      sprintln((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+      DEBUG_PRINT(i + 1);
+      DEBUG_PRINT(": ");
+      DEBUG_PRINT(WiFi.SSID(i));
+      DEBUG_PRINT(": ");
+      DEBUG_PRINT(WiFi.BSSIDstr(i));
+      DEBUG_PRINT(" Channel: ");
+      DEBUG_PRINT(WiFi.channel(i));
+      DEBUG_PRINT(" (");
+      DEBUG_PRINT(WiFi.RSSI(i));
+      DEBUG_PRINT(")");
+      DEBUG_PRINTLN((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
       delay(10);
      
     }
   }
-  sprintln("");  
+  DEBUG_PRINTLN();  
 }
 
 void setup() {
@@ -386,18 +378,6 @@ void setup() {
   pinMode(LEDPIN, OUTPUT);
   digitalWrite(LEDPIN, 0);
 
-  //DEBUGING WAKEUP
-  for(int i=0; i<5; i++) {
-    digitalWrite(LEDPIN, (i%2 == 0));
-    if (i%2 == 0) {
-      Serial.write(relOFF, sizeof(relOFF));     // turns the relay relOFF
-    } else {
-      Serial.write(relON, sizeof(relON));     // turns the relay relOFF
-    }
-    delay(6000);
-  }
-  Serial.write(relOFF, sizeof(relOFF));     // turns the relay relOFF
-  delay(6000);
   digitalWrite(LEDPIN, 0);
   
   //loadCredentials();
@@ -414,7 +394,7 @@ void setup() {
 
       //server.send(200, "text/plain", message);
       server.send ( 200, "application/json", "{\"Status\":\"Ok\"}" );
-      sprintln(message);
+      DEBUG_PRINTLN(message);
   });
   
   server.onNotFound ( handleNotFound );
@@ -424,8 +404,8 @@ void setup() {
   server.on("/password", HTTP_POST, handleAPPassword);
   server.on("/time", HTTP_POST, handleSetTime);
   server.on("/time", HTTP_GET, handleGetTime);
-  server.on("/alerts", HTTP_GET, handleDumpAlerts);
-  server.on("/alerts", HTTP_POST, handleAlerts);
+  server.on("/alerts", HTTP_GET, handleGetAlerts);
+  server.on("/alerts", HTTP_POST, handleUpdateAlerts);
   server.on("/alerts", HTTP_DELETE, handleDeleteAlerts);
 
   //here the list of headers to be recorded
@@ -435,7 +415,7 @@ void setup() {
   server.collectHeaders(headerkeys, headerkeyssize );  
     
 	server.begin();
-	sprintln("HTTP server started");
+	DEBUG_PRINTLN("HTTP server started");
 
   noInterrupts();
   timer0_isr_init();
@@ -446,7 +426,20 @@ void setup() {
 #if DEBUG
   WiFi.printDiag(Serial);
 #endif
-  
+
+  //DEBUGING WAKEUP
+  for(int i=0; i<5; i++) {
+    digitalWrite(LEDPIN, (i%2 == 0));
+    if (i%2 == 0) {
+      Serial.write(relOFF, sizeof(relOFF));     // turns the relay relOFF
+    } else {
+      Serial.write(relON, sizeof(relON));     // turns the relay relOFF
+    }
+    delay(6000);
+  }
+  Serial.write(relOFF, sizeof(relOFF));     // turns the relay relOFF
+  digitalWrite(LEDPIN, 0);
+    
 }
 
 void loop() {
@@ -454,17 +447,17 @@ void loop() {
 
   int iTemp = WiFi.softAPgetStationNum();
   if (iTemp != iConnectedAP) {
-    sprint("Stations connected = ");
-    sprintln(iTemp);
+    DEBUG_PRINT("Stations connected = ");
+    DEBUG_PRINTLN(iTemp);
     iConnectedAP = iTemp;
   }
 
 
   if (_timeout){
-      sprintln("TIME IS UP!");
+      DEBUG_PRINTLN("TIME IS UP!");
       _timeout = false;
       if (WiFi.status() != WL_CONNECTED) { 
-          sprintln("WIFI STA DISCONNECTING!");
+          DEBUG_PRINTLN("WIFI STA DISCONNECTING!");
           WiFi.setAutoConnect(false);
           WiFi.disconnect();
           os_timer_disarm(&mTimer);
@@ -472,6 +465,11 @@ void loop() {
           //wifi_station_set_auto_connect(false); //the ESP8266 station will not try to connect to the router automatically when power on until wifi_station_connect is called.
           //wifi_station_disconnect(); // ESP8266 station disconnects to the router, or ESP8266 station stops trying to connect to the target router.
       }
+  }
+
+  if (!bCheckedAlerts) {    
+    checkAlerts();
+    bCheckedAlerts = true;
   }
   
   yield();

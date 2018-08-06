@@ -1,3 +1,5 @@
+#include "DebugFunctions.h"
+
 // Using ArduinoJson 5.11
 #include <ArduinoJson.h>
 
@@ -26,7 +28,7 @@ void handleSetTime() {
          message += ReqJson;
          message += "\n";
   
-  sprintln(message);
+  DEBUG_PRINTLN(message);
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -42,11 +44,11 @@ void handleSetTime() {
     
   //Error Treatment
   if (iTime < 0) {
-    sprintln("SET TIME FORMAT ERROR");
+    DEBUG_PRINTLN("SET TIME FORMAT ERROR");
     server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Time Format Error: HH:MM\"}" );    
     return;
   } else if (iWeekday < 0 || iWeekday > 7) {
-    sprintln("SET TIME WEEKDAY ERROR");
+    DEBUG_PRINTLN("SET TIME WEEKDAY ERROR");
     server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Weekday Error: Sun-1, Mon-2, Tue-3, Wed-4, Thu-5, Fri-6, Sat-7\"}" );    
     return;
   }
@@ -59,13 +61,14 @@ void handleSetTime() {
   message = "Current Time\n";
   message += iCurrentTime;
   message += "\n";
-  sprintln(message);
+  DEBUG_PRINTLN(message);
 
   server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
 }
 
 void handleGetTime() {
+  /*
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
   root["Status"] = 1;
@@ -77,8 +80,29 @@ void handleGetTime() {
   
   String JSON;
   root.printTo(JSON);
+  */  
+  server.send ( 200, "application/json", getTime() );
+}
+
+void getTime(JsonObject& root) {
+  root["Status"] = 1;
+  root["timestamp"] = iCurrentTime;
+  short weekday = (iCurrentTime/(24*60*60))+1;
+  root["weekday"] = weekday;
+  int iTime = (iCurrentTime - (weekday-1)*24*60*60)/60;
+  root["time"] = convertTime(iTime); //in minutes  
+}
+
+String getTime() {  
   
-  server.send ( 200, "application/json", JSON );
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  getTime(root);
+  
+  String JSON;
+  root.printTo(JSON);
+  
+  return JSON;
 }
 
 void handleDeleteAlerts() {
@@ -98,7 +122,7 @@ void handleDeleteAlerts() {
       message += server.header(i) + "\n";      
     } 
 
-    sprintln(message);
+    DEBUG_PRINTLN(message);
  
   if (server.hasArg("plain")== false && server.hasHeader("plain") == false) {
     //Check if body received
@@ -113,7 +137,7 @@ void handleDeleteAlerts() {
          message += ReqJson;
          message += "\n";
   
-  sprintln(message);
+  DEBUG_PRINTLN(message);
   
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -125,13 +149,13 @@ void handleDeleteAlerts() {
   for(JsonArray::iterator jsonIt=alerts.begin(); jsonIt!=alerts.end(); ++jsonIt) {
         
     JsonObject& alert = *jsonIt;    
-    sprintln("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
+    DEBUG_PRINTLN("SEARCHING ID: " + String(alert["_id"].as<char*>()) );
     
     auto it = AlertsMap.find( alert["_id"].as<int>() );
     
     if (it != AlertsMap.end()) {
       oAlert = (*it).second;
-      sprintln("DELETING ID: " + String(oAlert.iId) );
+      DEBUG_PRINTLN("DELETING ID: " + String(oAlert.iId) );
     
       //search for Alert Id inside weekdaysList to remove it
       for (i = 0; i < 8; i++) {
@@ -140,17 +164,17 @@ void handleDeleteAlerts() {
           wki = WeekdaysList[i].begin();
                               
           //iterate in all values inside the week
-          sprint("DELETING WEEKDAYs: ");
+          DEBUG_PRINT("DELETING WEEKDAYs: ");
           while(wki != WeekdaysList[i].end()) {
             if ((*wki).iId == oAlert.iId ) {
               //get out of the loop
-              sprint(String(i) + " ");
+              DEBUG_PRINT(String(i) + " ");
               wki = WeekdaysList[i].erase(wki);
               break;
             }
             ++wki;
           }
-          sprintln(); 
+          DEBUG_PRINTLN(); 
         }            
       }
 
@@ -159,7 +183,7 @@ void handleDeleteAlerts() {
       server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
     } else {
-      sprintln("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
+      DEBUG_PRINTLN("NOT FOUND ID:" + String(alert["_id"].as<char*>()));
       server.send ( 404, "application/json", "{\"Status\":\"-1\", \"Message\":\"Not Found\"}" );
     }    
   }
@@ -168,13 +192,13 @@ void handleDeleteAlerts() {
 /**
  * Main Function
  */
-void handleAlerts() {
+void handleUpdateAlerts() {
     String ReqJson = server.arg("plain");
     String message = "POST received:\n";
            message += ReqJson;
            message += "\n";
 
-    sprintln(message);
+    DEBUG_PRINTLN(message);
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& _root = jsonBuffer.parseObject(ReqJson);
@@ -211,7 +235,7 @@ void handleAlerts() {
       WeekdaysList[i].sort(compFirst);          
     }
 
-    sprintln("SORTED");
+    DEBUG_PRINTLN("SORTED");
     
     dumpWeekdaysList();
 
@@ -221,7 +245,7 @@ void handleAlerts() {
 }
 
 //Return all alerts at the database
-void handleDumpAlerts() {
+void handleGetAlerts() {
   dumpAlertsMap();
   dumpWeekdaysList();
 
@@ -230,6 +254,8 @@ void handleDumpAlerts() {
   JsonObject& root = jsonBuffer.createObject();
   root["Status"] = 1;
   JsonArray& alerts = root.createNestedArray("alerts");
+
+  getTime(root);
 
   //iterates all DB and create the JSON Array for each alert as JSON Object
   for (auto it = AlertsMap.begin(); it != AlertsMap.end(); it++) {
@@ -279,7 +305,7 @@ void handleNotFound() {
 
 //Scan WiFi Networks
 void handleScan() {
-  sprintln("WiFi Scan start");
+  DEBUG_PRINTLN("WiFi Scan start");
 
   // WiFi.scanNetworks will return the number of networks found
   int n = WiFi.scanNetworks();
@@ -289,29 +315,29 @@ void handleScan() {
   //wifiJSON = jsonBuffer.createObject();
   JsonArray& networks = wifiJSON.createNestedArray("networks");
 
-  sprintln("WiFi Scan done");
+  DEBUG_PRINTLN("WiFi Scan done");
   if (n == 0) {
     wifiJSON["Status"] = 0;
-    sprintln("No networks found");
+    DEBUG_PRINTLN("No networks found");
   } else {
     wifiJSON["Status"] = 1;
-    sprint(n);
-    sprintln(" networks found");
+    DEBUG_PRINT(n);
+    DEBUG_PRINTLN(" networks found");
     for (int i = 0; i < n; ++i)
     {
       // Print SSID and RSSI for each network found
       
-      sprint(i + 1);
-      sprint(": ");
-      sprint(WiFi.SSID(i));
-      sprint(": ");
-      sprint(WiFi.BSSIDstr(i));
-      sprint(" Channel: ")
-      sprint(WiFi.channel(i));            
-      sprint(" (");
-      sprint(WiFi.RSSI(i));
-      sprint(")");
-      sprintln((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+      DEBUG_PRINT(i + 1);
+      DEBUG_PRINT(": ");
+      DEBUG_PRINT(WiFi.SSID(i));
+      DEBUG_PRINT(": ");
+      DEBUG_PRINT(WiFi.BSSIDstr(i));
+      DEBUG_PRINT(" Channel: ")
+      DEBUG_PRINT(WiFi.channel(i));            
+      DEBUG_PRINT(" (");
+      DEBUG_PRINT(WiFi.RSSI(i));
+      DEBUG_PRINT(")");
+      DEBUG_PRINTLN((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
       delay(10);
       
       JsonObject& JsonNetwork = jsonBuffer.createObject();
@@ -333,14 +359,14 @@ void handleScan() {
 
 //Connect to a previous Wifi
 void handleConnect() {
-  sprintln("WiFi Connection start");
+  DEBUG_PRINTLN("WiFi Connection start");
 
   String ReqJson = server.arg("plain");
   String message = "POST received:\n";
          message += ReqJson;
          message += "\n";
 
-  sprintln(message);
+  DEBUG_PRINTLN(message);
   //Parse JSON Packet
   DynamicJsonBuffer jsonBuffer;
   JsonObject& _root = jsonBuffer.parseObject(ReqJson);

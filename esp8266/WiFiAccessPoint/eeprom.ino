@@ -20,6 +20,7 @@
  * 
  */
 
+#include "DebugFunctions.h"
 
 #define NETWORK_SIZE 2*(32+1)
 #define MAX_ALERTS 64 //1 byte //must reduce the amount of ALERTS due to ESP01
@@ -35,12 +36,12 @@ int wAddr, rAddr;
 
 void dumpAlert(Alerts *oAlert) {
   if (oAlert != 0) {
-    sprintln("ID: " + String( oAlert->iId ));    
-    sprintln("TIME: " + String( oAlert->iTime ) + " = " + convertTime(oAlert->iTime));
-    sprintln("DURATION: " + String( oAlert->iDuration ) + " = " + convertTime(oAlert->iDuration));
+    DEBUG_PRINTLN("ID: " + String( oAlert->iId ));    
+    DEBUG_PRINTLN("TIME: " + String( oAlert->iTime ) + " = " + convertTime(oAlert->iTime));
+    DEBUG_PRINTLN("DURATION: " + String( oAlert->iDuration ) + " = " + convertTime(oAlert->iDuration));
     Serial.print("WEEKDAYS: ");
     Serial.print(oAlert->bWeekdays, HEX);
-    sprintln();
+    DEBUG_PRINTLN();
   }
 }
 
@@ -53,13 +54,13 @@ void EEPROMLoadAlerts() {
 
   wAddr = EEPROM.read(ALERTS_LENGTH_POS); 
 
-  sprintln("--> EEPROM : Saved Alerts = " + String(wAddr) );
+  DEBUG_PRINTLN("--> EEPROM : Saved Alerts = " + String(wAddr) );
 
   wAddr = ALERTS_INIT + wAddr*ALERT_SIZE;
 
-  sprintln("rAddr: " + String(rAddr));
-  sprintln("wAddr: " + String(wAddr));
-  sprintln("EEPROM_SIZE: " + String(EEPROM_SIZE));
+  DEBUG_PRINTLN("rAddr: " + String(rAddr));
+  DEBUG_PRINTLN("wAddr: " + String(wAddr));
+  DEBUG_PRINTLN("EEPROM_SIZE: " + String(EEPROM_SIZE));
   
   while (rAddr < EEPROM_SIZE && rAddr < wAddr) {
 
@@ -69,7 +70,7 @@ void EEPROMLoadAlerts() {
     if (oAlert.iId >= 0) {
       AlertsMap[ oAlert.iId ] = oAlert;    
   
-      sprintln("--> EEPROM : LOADED Alert " + String(oAlert.iId) );
+      DEBUG_PRINTLN("--> EEPROM : LOADED Alert " + String(oAlert.iId) );
   
       //check if the weekday is set and add it to WeekdaysList
       for (int i = 0; i < 8; i++) {
@@ -96,7 +97,7 @@ void EEPROMInit() {
 
   //wAlert = (Alerts) {.iId = 0, .iTime = 360, .iDuration = 10, .bWeekdays = 0x55};
 
-  //sprintln("DUMP Write Alert");
+  //DEBUG_PRINTLN("DUMP Write Alert");
   //dumpAlert(&wAlert);
   
   wAddr = ALERTS_INIT;
@@ -106,7 +107,7 @@ void EEPROMInit() {
   //EEPROM.commit();
   //delay(100);
     
-  //sprintln("DUMP Read Alert " + String(wAddr));
+  //DEBUG_PRINTLN("DUMP Read Alert " + String(wAddr));
   //EEPROMReadAlert(wAddr, &rAlert);
   //dumpAlert(&rAlert);
 }
@@ -124,7 +125,7 @@ void EEPROMErase() {
 
 void EEPROMWriteNextAlert(Alerts *oAlert) {
   if (wAddr < EEPROM_SIZE) {
-      sprintln(">>> EEPROMWriteNextAlert[" + String(wAddr) + "] = " + String(oAlert->iId) );
+      DEBUG_PRINTLN(">>> EEPROMWriteNextAlert[" + String(wAddr) + "] = " + String(oAlert->iId) );
       EEPROMWriteAlert(wAddr, oAlert);
       wAddr += ALERT_SIZE;      
   }
@@ -134,7 +135,7 @@ void EEPROMReadNextAlert(Alerts *oAlert) {
   if (rAddr < EEPROM_SIZE) {      
       EEPROMReadAlert(rAddr, oAlert);
       if (oAlert->iId >= 0) {
-        sprintln(">>> EEPROMReadNextAlert[" + String(rAddr) + "] = " + String(oAlert->iId) );
+        DEBUG_PRINTLN(">>> EEPROMReadNextAlert[" + String(rAddr) + "] = " + String(oAlert->iId) );
       }
       rAddr += ALERT_SIZE;      
   }
@@ -150,7 +151,7 @@ void EEPROMCommit() {
     AlertsSize++;
   }
 
-  sprintln(">>> EEPROMCommit Alerts = " + String(AlertsSize) );
+  DEBUG_PRINTLN(">>> EEPROMCommit Alerts = " + String(AlertsSize) );
   
   EEPROM.write(ALERTS_LENGTH_POS, AlertsSize );  
   EEPROM.commit();
@@ -159,7 +160,7 @@ void EEPROMCommit() {
 
 bool EEPROMWriteNetwork(String network, String password) {
   if (network.length() > 32 || password.length() > 32) {    
-    sprintln("Maximum Network/Password size exceeded");
+    DEBUG_PRINTLN("Maximum Network/Password size exceeded");
     return false;  
   } else {
     int address = 0;
@@ -171,8 +172,8 @@ bool EEPROMWriteNetwork(String network, String password) {
     memcpy(&aPwd, password.c_str(), 32);    
     aPwd[32] = '\0';
     
-    sprintln("Network: '" + network + "' == '" + aNet + "'");
-    sprintln("Password: '" + password + "' == '" + aPwd + "'");    
+    DEBUG_PRINTLN("Network: '" + network + "' == '" + aNet + "'");
+    DEBUG_PRINTLN("Password: '" + password + "' == '" + aPwd + "'");    
         
     //EEPROM.write(address, four);
     return true;

@@ -1,3 +1,4 @@
+#include "DebugFunctions.h"
 
 void dumpJsonObject(JsonObject& obj) {
   for(JsonObject::iterator at=obj.begin(); at!=obj.end(); ++at) 
@@ -8,7 +9,7 @@ void dumpJsonObject(JsonObject& obj) {
     // at->value contains the JsonVariant which can be casted as usual
     const char* value = at->value;
 
-    sprintln( String(key) + " - " + String(value) );            
+    DEBUG_PRINTLN( String(key) + " - " + String(value) );            
   }        
 }
 
@@ -27,36 +28,36 @@ void dumpAlertsMap() {
 
     dumpAlert(oAlert);
 /*    
-    sprintln("ID: " + String( (*it).first ));    
+    DEBUG_PRINTLN("ID: " + String( (*it).first ));    
     //iHour = alert.iTime/60;
     //iMin = alert.iTime%60;
-    sprintln("TIME: " + String( alert.iTime ) + " = " + convertTime(alert.iTime));
+    DEBUG_PRINTLN("TIME: " + String( alert.iTime ) + " = " + convertTime(alert.iTime));
 
     //iHour = alert.iDuration/60;
     //iMin = alert.iDuration%60;
         
-    //sprintln("DURATION: " + String( alert.iDuration ) + " = " + String(iHour) +":"+String(iMin));
-    sprintln("DURATION: " + String( alert.iDuration ) + " = " + convertTime(alert.iDuration));
-    sprint("WEEKDAYS: ");
-    sprint(alert.bWeekdays, HEX);
-    sprint(" = ");
-    sprint(alert.bWeekdays, BIN);
-    sprintln();
-    sprintln();
+    //DEBUG_PRINTLN("DURATION: " + String( alert.iDuration ) + " = " + String(iHour) +":"+String(iMin));
+    DEBUG_PRINTLN("DURATION: " + String( alert.iDuration ) + " = " + convertTime(alert.iDuration));
+    DEBUG_PRINT("WEEKDAYS: ");
+    DEBUG_PRINT(alert.bWeekdays, HEX);
+    DEBUG_PRINT(" = ");
+    DEBUG_PRINT(alert.bWeekdays, BIN);
+    DEBUG_PRINTLN();
+    DEBUG_PRINTLN();
 */
   }
 }
 
 void dumpAlert(Alerts oAlert) {
 #if DEBUG
-    sprintln("ID: " + String( oAlert.iId ));    
-    sprintln("TIME: " + String( oAlert.iTime ) + " = " + convertTime(oAlert.iTime));
-    sprintln("DURATION: " + String( oAlert.iDuration ) + " = " + convertTime(oAlert.iDuration));
-    sprint("WEEKDAYS: ");
+    DEBUG_PRINTLN("ID: " + String( oAlert.iId ));    
+    DEBUG_PRINTLN("TIME: " + String( oAlert.iTime ) + " = " + convertTime(oAlert.iTime));
+    DEBUG_PRINTLN("DURATION: " + String( oAlert.iDuration ) + " = " + convertTime(oAlert.iDuration));
+    DEBUG_PRINT("WEEKDAYS: ");
     Serial.print(oAlert.bWeekdays, HEX);
-    sprint(" = ");
+    DEBUG_PRINT(" = ");
     Serial.print(oAlert.bWeekdays, BIN);
-    sprintln();  
+    DEBUG_PRINTLN();  
 #endif    
 }
 
@@ -64,16 +65,16 @@ void dumpWeekdaysList() {
   int i, iTime, iId;
   std::list<WeekAlert> oList;
 
-  sprintln("Weekdays List");
+  DEBUG_PRINTLN("Weekdays List");
   for (i=0; i<8; i++){
     oList = WeekdaysList[i];
-    sprint(String(i) + ": ");
+    DEBUG_PRINT(String(i) + ": ");
     for (auto it = oList.begin(); it != oList.end(); it++) {
       iId = (*it).iId;
       iTime = (AlertsMap[ iId ]).iTime;
-      sprint(String( iId ) + "-" + convertTime(iTime) + " ");
+      DEBUG_PRINT(String( iId ) + "-" + convertTime(iTime) + " ");
     }
-    sprintln();
+    DEBUG_PRINTLN();
   }
 }
 
@@ -116,9 +117,9 @@ Alerts parseAlertJson(JsonObject& alert) {
   // Mon Tue Wed Thu Fri Sat Sun
   // 2   3   4   5   6   7   1        
   weekdaysCount = alert["Weekdays"].as<JsonArray>().copyTo(aWeekdays);
-  //sprintln("\tWeekdays: " + String(weekdaysCount));
+  //DEBUG_PRINTLN("\tWeekdays: " + String(weekdaysCount));
   for (i = 0; i < weekdaysCount; i++) {
-    //sprintln("\t ["+ String(i) +"] = " + String(aWeekdays[i]));
+    //DEBUG_PRINTLN("\t ["+ String(i) +"] = " + String(aWeekdays[i]));
     bWeekdays |= 1 << aWeekdays[i];
   }
 
