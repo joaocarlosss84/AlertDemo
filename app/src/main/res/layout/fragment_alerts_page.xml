@@ -4,44 +4,49 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_weight="1"
     tools:context="net.unitecgroup.www.unitecrfid.AlertsPageActivity">
 
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:elevation="0dp"
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:context=".AlertsPageFragment"
         tools:showIn="@layout/app_bar_main">
 
-        <TextView
-            android:id="@+id/textViewBeacon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="DeviceName" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@color/colorPrimaryDark"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/textView7"
+                android:id="@+id/textViewBeacon"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="4"
-                android:text="@string/Time" />
+                android:layout_marginLeft="10px"
+                android:layout_weight="1"
+                android:text="DeviceName"
+                android:textColor="@color/cardview_light_background"
+                android:textSize="30sp" />
 
-            <TextView
-                android:id="@+id/textViewTime"
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/buttonRefresh"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/TimePattern"
-                android:visibility="visible" />
+                android:background="@android:drawable/ic_popup_sync" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/textViewTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10px"
+            android:text="@string/TimePattern"
+            android:textSize="18sp" />
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/mainListView"
@@ -53,14 +58,14 @@
 
     </LinearLayout>
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
-        android:visibility="visible"
-        app:elevation="0dp"
-        app:srcCompat="@android:drawable/ic_lock_idle_alarm" />
+    <!--<android.support.design.widget.FloatingActionButton-->
+        <!--android:id="@+id/fab"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_gravity="bottom|end"-->
+        <!--android:layout_margin="@dimen/fab_margin"-->
+        <!--app:elevation="4dp"-->
+        <!--app:srcCompat="@android:drawable/ic_lock_idle_alarm"-->
+        <!--tools:ignore="MissingConstraints" />-->
 
 </FrameLayout>

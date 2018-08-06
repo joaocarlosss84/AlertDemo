@@ -1,7 +1,9 @@
 package net.unitecgroup.www.unitecrfid;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -11,6 +13,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
@@ -21,6 +25,9 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -83,7 +90,7 @@ public class AlertsPageFragment extends Fragment implements
     RecyclerView mRecyclerView;
     DatabaseTable mDB;
     TextView oTVBeaconName;
-
+    AlertsPageActivity oParentActivity = (AlertsPageActivity) this.getActivity();;
 
     public AlertsPageFragment() {
         // Required empty public constructor
@@ -148,6 +155,9 @@ public class AlertsPageFragment extends Fragment implements
         } else if (id == R.id.action_getTime) {
             getTime();
             return true;
+        } else if (id == R.id.action_changePassword) {
+            changePassword();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -155,13 +165,20 @@ public class AlertsPageFragment extends Fragment implements
     @Override
     public void onResume() {
         super.onResume();
-        AlertsPageActivity oParent = (AlertsPageActivity) getActivity();
+        refreshBeacon();
+    }
 
-        if (oParent.mBeaconIP != "") {
-            oTVBeaconName.setText(oParent.mBeaconName);
+    public void refreshBeacon() {
+        oParentActivity = (AlertsPageActivity) this.getActivity();
+        if (oParentActivity.mBeaconIP != "") {
+            oTVBeaconName.setText(oParentActivity.mBeaconName);
             getAlerts();
             getTime();
         }
+    }
+
+    public void setBeaconName(String sName) {
+        oTVBeaconName.setText(sName);
     }
 
     @Override
@@ -174,23 +191,33 @@ public class AlertsPageFragment extends Fragment implements
         fm = getFragmentManager();
 
         oTVBeaconName = (TextView) rootView.findViewById(R.id.textViewBeacon);
-
-        //Floating Action Button
-        fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        Button oButtonRefresh = (Button) rootView.findViewById(R.id.buttonRefresh);
+        oButtonRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                oAddAlert = new AddAlertDialog();
-                oAddAlert.show(fm, "Dialog Fragment");
+            public void onClick(View v) {
+                refreshBeacon();
             }
         });
+
+        //Floating Action Button
+//        fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
+        oParentActivity = (AlertsPageActivity) this.getActivity();
+        if (oParentActivity.oFAB != null) {
+            fab = oParentActivity.oFAB;
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    showAddAlert();
+                }
+            });
+        }
 
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.mainListView);
 
         mDB = Application.getDatabase();
 
         // Reading all contacts
-        ArrayList<Alert> alerts = mDB.getAllAlerts();
+        ArrayList<Alert> alerts = new ArrayList<Alert>();  //mDB.getAllAlerts();
 
         //Do not create more than one Adapter to avoid problems with screen rotation
         if (oAlertListAdapter == null) {
@@ -198,10 +225,24 @@ public class AlertsPageFragment extends Fragment implements
             oAlertListAdapter = new AlertListAdapter( this, alerts);
         }
 
-
         setUpRecyclerView();
 
         return rootView;
+    }
+
+    private void showAddAlert() {
+        Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat mdformat = new SimpleDateFormat("HH:mm");
+        String sTime = mdformat.format(calendar.getTime());
+
+        //Set current time as default
+        args.putString(ALERT_TIME, sTime);
+        args.putString(ALERT_DURATION, "00:00");
+
+        oAddAlert = new AddAlertDialog();
+        oAddAlert.setArguments(args);
+        oAddAlert.show(fm, "Dialog Fragment");
     }
 
     private void setUpRecyclerView() {
@@ -795,9 +836,20 @@ public class AlertsPageFragment extends Fragment implements
             int iTimestamp = oJS.getInt("timestamp");
             String sTime = oJS.getString("time");
             int iWeekday = oJS.getInt("weekday");
-
+            String sWeekday = "";
             TextView textView = (TextView) this.getView().findViewById(R.id.textViewTime);
-            textView.setText(sTime);
+
+            switch(iWeekday) {
+                case Calendar.MONDAY: sWeekday = "MONDAY"; break;
+                case Calendar.TUESDAY: sWeekday = "TUESDAY"; break;
+                case Calendar.WEDNESDAY: sWeekday = "WEDNESDAY"; break;
+                case Calendar.THURSDAY: sWeekday = "THURSDAY"; break;
+                case Calendar.FRIDAY: sWeekday = "FRIDAY"; break;
+                case Calendar.SATURDAY: sWeekday = "SATURDAY"; break;
+                case Calendar.SUNDAY: sWeekday = "SUNDAY"; break;
+            }
+
+            textView.setText(sWeekday + ", " + sTime);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -861,12 +913,18 @@ public class AlertsPageFragment extends Fragment implements
 
         JSONObject json = null;
         int iWeekday = calendar.get(Calendar.DAY_OF_WEEK);
+        int iSeconds = calendar.get(Calendar.SECOND);
+        int iMinutes = calendar.get(Calendar.MINUTE);
+        int iHour = calendar.get(Calendar.HOUR_OF_DAY);
         String sTime = mdformat.format(calendar.getTime());
+
+        int iTimestamp = (iWeekday-1)*24*60*60 + iHour*60*60 + iMinutes*60 + iSeconds;
 
         try {
             json = new JSONObject();
             json.put("weekday", iWeekday);
             json.put("_time", sTime);
+            json.put("timestamp", iTimestamp);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -909,4 +967,64 @@ public class AlertsPageFragment extends Fragment implements
 
         return bSuccess[0];
     }
+
+    private void changePassword() {
+        //DialogFragment
+        AlertDialog.Builder oDialogBuilder = new AlertDialog.Builder(getActivity());
+
+        //Use inflater to create a new instance of the Dialog and set the view objects attributes
+        LayoutInflater inflater = (LayoutInflater) getActivity().getBaseContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View oDialogView = inflater.inflate(R.layout.change_password_dialog, null);
+        //Configure TextViews:
+        final EditText oETPassword = (EditText) oDialogView.findViewById(R.id.editTextPassword);
+        final EditText oETPassword2 = (EditText) oDialogView.findViewById(R.id.editTextPassword2);
+
+        oDialogBuilder
+                .setView(oDialogView)
+                //.setIcon(R.drawable.ic_menu_camera)
+                .setTitle("Change Password")
+                .setPositiveButton("Save", null)
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+        AlertDialog oAlertDialog = oDialogBuilder.create();
+
+        //Overwrite the Save button to add verification
+        oAlertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+
+            @Override
+            public void onShow(DialogInterface dialog) {
+
+                Button button = ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_POSITIVE);
+                button.setOnClickListener(new View.OnClickListener() {
+
+                    @Override
+                    public void onClick(View view) {
+                        // Alert Validation
+                        if (oETPassword != oETPassword2) {
+                            Snackbar.make(view, "Paswords must be equal", Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
+
+                        } else {
+                            // Send the event to the host activity
+                            //Alert oAlert = new Alert();
+                            //oAlert.set_id(_id);
+                            //oAlert.set_time(oTextViewTime.getText().toString());
+                            //oAlert.set_duration(oTextViewDuration.getText().toString());
+                            //oAlert.set_weekdays(new ArrayList<Integer>(oSelectedWeekdays));
+                            //oAlertListener.OnAlertSaved(_pos, oAlert);
+                            //Dismiss once everything is OK.
+                            //getDialog().dismiss();
+                        }
+                    }
+                });
+            }
+        });
+
+        oAlertDialog.show();
+    }
+
 }

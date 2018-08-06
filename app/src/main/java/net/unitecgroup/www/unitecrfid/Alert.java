@@ -6,7 +6,10 @@ import android.os.Parcelable;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
+import java.text.DateFormatSymbols;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * Created by 20006030 on 12/06/2017.
@@ -88,8 +91,16 @@ public class Alert implements Parcelable {
     }
 
     @Override
+    //https://stackoverflow.com/questions/8924231/dateformatsymbols-getshortweekdays-returning-weekdays-count-as-8
     public String toString() {
-        return this._id + " - " + this._time + " - " + this._duration + " - " + this._weekdays;
+        String[] shortWeekdays = new DateFormatSymbols().getShortWeekdays();
+        String sWeekDays = "";
+        for (short i=0; i < this._weekdays.size(); i++) {
+            sWeekDays += shortWeekdays[this._weekdays.get(i)];
+            sWeekDays += " ";
+        }
+
+        return this._id + " - " + this._time + " - " + this._duration + " - " + sWeekDays;
     }
 
     @Override

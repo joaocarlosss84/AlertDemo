@@ -245,7 +245,7 @@ public class ScanWifiFragment extends ListFragment {
                             Log.i("NETWORKSTATECHANGED", "info: "+ dinfo.toString()+"");
 
                             if(mBeaconConnectedListener != null) {
-                                mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress), mConf.SSID);
+                                mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress), mConf.SSID.replaceAll("\"",""));
                             }
 
                         }
@@ -287,7 +287,7 @@ public class ScanWifiFragment extends ListFragment {
     }
 
     @SuppressLint("DefaultLocale")
-    private String intToIp(int ip) {
+    static public String intToIp(int ip) {
         return String.format("%d.%d.%d.%d", (ip & 0xff),
                     (ip >> 8 & 0xff), (ip >> 16 & 0xff),
                     (ip >> 24 & 0xff));

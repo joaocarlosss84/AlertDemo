@@ -1,15 +1,18 @@
 package net.unitecgroup.www.unitecrfid;
 
 import android.content.Context;
+import android.net.DhcpInfo;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,7 +20,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
+
+import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
+import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 
 public class AlertsPageActivity extends BaseActivity
         implements  AlertsPageFragment.OnFragmentInteractionListener,
@@ -46,11 +54,16 @@ public class AlertsPageActivity extends BaseActivity
     private Fragment mCurrentFragment;
     public String mBeaconIP;
     public String mBeaconName;
+    public FloatingActionButton oFAB;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alerts_page);
+
+
+        //Floating Action Button
+        oFAB = (FloatingActionButton) findViewById(R.id.fab);
 
         //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         //setSupportActionBar(toolbar);
@@ -63,16 +76,61 @@ public class AlertsPageActivity extends BaseActivity
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
+        //detects which page is being shown
+        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                if (oFAB != null) {
+                    if (position == 1) {
+                        oFAB.setVisibility(View.VISIBLE);
+                    } else {
+                        oFAB.setVisibility(View.GONE);
+                    }
+                }
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
+            }
+        });
+
         //Set current WiFi Connection to restore it onDestroy
         wifi = (WifiManager) this.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        mWifiInfo = wifi.getConnectionInfo();
+        mBeaconIP = "";
+        mBeaconName = "";
+
+        if (wifi != null) {
+            mWifiInfo = wifi.getConnectionInfo();
+            String sSSID = mWifiInfo.getSSID().replaceAll("\"", "");
+
+            if (sSSID.toLowerCase().startsWith("atmosphera")) {
+                DhcpInfo dinfo = wifi.getDhcpInfo();
+                mBeaconIP = ScanWifiFragment.intToIp(dinfo.serverAddress);
+                mBeaconName = sSSID;
+            }
+        }
     }
 
     //Disconnect from Beacon and reconnect to previous WiFi
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        restoreWifi();
+    }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        restoreWifi();
+    }
+
+    private void restoreWifi() {
         //Restore the previous WiFi Connection
         if (wifi != null) {
             List<WifiConfiguration> list = wifi.getConfiguredNetworks();
@@ -89,10 +147,27 @@ public class AlertsPageActivity extends BaseActivity
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        //reconnect to previous beacon if possible:
+        if (wifi != null && mBeaconName != "") {
+            List<WifiConfiguration> list = wifi.getConfiguredNetworks();
+            for (WifiConfiguration conf : list) {
+                //"\"" + networkSSID + "\""
+                if (conf.SSID != null && conf.SSID.indexOf(mBeaconName) > 0) {
+                    wifi.disconnect();
+                    wifi.enableNetwork(conf.networkId, true);
+                    wifi.reconnect();
+                    break;
+                }
+            }
+        }
+    }
+
+    @Override
     protected int getNavigationDrawerID() {
         return R.id.nav_alerts;
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -125,6 +200,7 @@ public class AlertsPageActivity extends BaseActivity
 
     public void changeToFragment(int iFragment) {
         mViewPager.setCurrentItem(iFragment);
+
     }
 
     @Override
@@ -147,6 +223,9 @@ public class AlertsPageActivity extends BaseActivity
         mBeaconIP = sBeaconIP;
         mBeaconName = sBeaconName;
         changeToNextFragment();
+        if (mCurrentFragment instanceof  AlertsPageFragment) {
+            ((AlertsPageFragment) mCurrentFragment).refreshBeacon();
+        }
     }
 
     /**
@@ -201,7 +280,8 @@ public class AlertsPageActivity extends BaseActivity
             if (position == 0) {
                 return ScanWifiFragment.newInstance(ScanWifiFragment.WIFIFRAGMENT, "wifi");
             } else if (position == 1) {
-                return AlertsPageFragment.newInstance("Alert", "wifi");
+                Fragment oFrag = AlertsPageFragment.newInstance("Alert", "wifi");
+                return oFrag;
             } else {
                 return PlaceholderFragment.newInstance(position + 1);
             }
