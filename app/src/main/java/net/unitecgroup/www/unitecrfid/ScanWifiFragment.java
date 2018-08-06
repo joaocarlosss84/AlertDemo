@@ -226,6 +226,12 @@ public class ScanWifiFragment extends ListFragment {
                         Log.d("NETWORKSTATECHANGED", "changeState");
                         changeState(state, info);
                     }
+                    int supl_error=intent.getIntExtra(WifiManager.EXTRA_SUPPLICANT_ERROR, -1);
+                    if(supl_error==WifiManager.ERROR_AUTHENTICATING){
+                        Log.d("ERROR_AUTHENTICATING", "ERROR_AUTHENTICATING!");
+                        //Once WiFi Password failed, remove the BeaconSSID
+                        wifi.removeNetwork(mConf.networkId);
+                    }
                 }
 
                 private void changeState(NetworkInfo.DetailedState aState, WifiInfo info) {
@@ -247,7 +253,6 @@ public class ScanWifiFragment extends ListFragment {
                             if(mBeaconConnectedListener != null) {
                                 mBeaconConnectedListener.OnBeaconConnected(intToIp(dinfo.serverAddress), mConf.SSID.replaceAll("\"",""));
                             }
-
                         }
                     } else if (aState == NetworkInfo.DetailedState.DISCONNECTING) {
                         Log.d("wifiSupplicanState", "DISCONNECTING");

@@ -14,7 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
@@ -27,7 +26,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -170,10 +168,12 @@ public class AlertsPageFragment extends Fragment implements
 
     public void refreshBeacon() {
         oParentActivity = (AlertsPageActivity) this.getActivity();
+        oParentActivity.getBeaconIP();
+
         if (oParentActivity.mBeaconIP != "") {
             oTVBeaconName.setText(oParentActivity.mBeaconName);
             getAlerts();
-            getTime();
+            //getTime();
         }
     }
 
@@ -595,8 +595,10 @@ public class AlertsPageFragment extends Fragment implements
     }
 
     private void getAlerts() {
-        String requestPath = Application.loadServerPath();
-        final Activity oParent = this.getActivity();
+        //String requestPath = Application.loadServerPath();
+        //final Activity oParent = this.getActivity();
+        String requestPath = "http://" + oParentActivity.mBeaconIP + "/alerts";
+
 
         JsonObjectRequest JsonRequest = new JsonObjectRequest(
                 Request.Method.GET,
@@ -610,6 +612,7 @@ public class AlertsPageFragment extends Fragment implements
                             Status = response.getInt("Status");
                             if (Status == 1) {
                                 JSONArray aJSAlerts = response.getJSONArray("alerts");
+                                callbackGetTime(response);
                                 callbackGetAlerts(aJSAlerts);
                             }
                         } catch (JSONException e) {
@@ -617,9 +620,9 @@ public class AlertsPageFragment extends Fragment implements
                         }
 
                         if (Status == 1) {
-                            Toast.makeText(oParent, "Success on Loading Alerts", Toast.LENGTH_LONG).show();
+                            Toast.makeText(oParentActivity, "Success on Loading Alerts", Toast.LENGTH_LONG).show();
                         } else {
-                            Toast.makeText(oParent, "No Alerts to be loaded", Toast.LENGTH_LONG).show();
+                            Toast.makeText(oParentActivity, "No Alerts to be loaded", Toast.LENGTH_LONG).show();
                         }
                     }
                 },
@@ -627,7 +630,7 @@ public class AlertsPageFragment extends Fragment implements
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(oParent, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
+                        Toast.makeText(oParentActivity, "Error on Loading Alerts", Toast.LENGTH_LONG).show();
                         //master.addInventoryServerCallback(serverResponse);
                     }
                 }
@@ -656,7 +659,9 @@ public class AlertsPageFragment extends Fragment implements
             alerts = mDB.getAllAlerts();
         }
 
-        String requestPath = Application.loadServerPath();
+        //String requestPath = Application.loadServerPath();
+        String requestPath = "http://" + oParentActivity.mBeaconIP + "/alerts";
+
 
         GsonBuilder builder = new GsonBuilder();
         builder.excludeFieldsWithoutExposeAnnotation();
@@ -742,7 +747,9 @@ public class AlertsPageFragment extends Fragment implements
             alerts = mDB.getAllAlerts();
         }
 
-        String requestPath = Application.loadServerPath();
+        //String requestPath = Application.loadServerPath();
+        String requestPath = "http://" + oParentActivity.mBeaconIP + "/alerts";
+
         final boolean[] bSuccess = {false};
 
         GsonBuilder builder = new GsonBuilder();

@@ -7,12 +7,12 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,12 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.List;
-
-import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_DURATION;
-import static net.unitecgroup.www.unitecrfid.AddAlertDialog.ALERT_TIME;
 
 public class AlertsPageActivity extends BaseActivity
         implements  AlertsPageFragment.OnFragmentInteractionListener,
@@ -48,10 +43,12 @@ public class AlertsPageActivity extends BaseActivity
      */
     private ViewPager mViewPager;
 
+    private WifiInfo mWifiInit;
     private WifiInfo mWifiInfo;
     private WifiManager wifi;
 
     private Fragment mCurrentFragment;
+    private Fragment mAlertFragment;
     public String mBeaconIP;
     public String mBeaconName;
     public FloatingActionButton oFAB;
@@ -102,9 +99,19 @@ public class AlertsPageActivity extends BaseActivity
 
         //Set current WiFi Connection to restore it onDestroy
         wifi = (WifiManager) this.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+        //Get Current WiFi Connection
+        if (wifi != null) {
+            mWifiInit = wifi.getConnectionInfo();
+        }
+
         mBeaconIP = "";
         mBeaconName = "";
 
+        getBeaconIP();
+    }
+
+    public void getBeaconIP() {
         if (wifi != null) {
             mWifiInfo = wifi.getConnectionInfo();
             String sSSID = mWifiInfo.getSSID().replaceAll("\"", "");
@@ -136,7 +143,7 @@ public class AlertsPageActivity extends BaseActivity
             List<WifiConfiguration> list = wifi.getConfiguredNetworks();
             for (WifiConfiguration conf : list) {
                 //"\"" + networkSSID + "\""
-                if (conf.SSID != null && conf.SSID.equals(mWifiInfo.getSSID())) {
+                if (conf.SSID != null && conf.SSID.equals(mWifiInit.getSSID())) {
                     wifi.disconnect();
                     wifi.enableNetwork(conf.networkId, true);
                     wifi.reconnect();
@@ -187,6 +194,7 @@ public class AlertsPageActivity extends BaseActivity
         //noinspection SimplifiableIfStatement
         if (mCurrentFragment instanceof AlertsPageFragment ) {
             mCurrentFragment.onOptionsItemSelected(item);
+            mAlertFragment = mCurrentFragment;
         }
 
         return super.onOptionsItemSelected(item);
@@ -220,12 +228,27 @@ public class AlertsPageActivity extends BaseActivity
 
     @Override
     public void OnBeaconConnected(String sBeaconIP, String sBeaconName) {
+        //Execute after a few seconds the Beacon Update message
         mBeaconIP = sBeaconIP;
         mBeaconName = sBeaconName;
+
+        if (mAlertFragment instanceof  AlertsPageFragment) {
+            ((AlertsPageFragment) mAlertFragment).refreshBeacon();
+        }
+
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                changeToNextFragment();
+            }
+        }, 2000);
+        /*
         changeToNextFragment();
         if (mCurrentFragment instanceof  AlertsPageFragment) {
             ((AlertsPageFragment) mCurrentFragment).refreshBeacon();
         }
+        */
     }
 
     /**
@@ -291,6 +314,10 @@ public class AlertsPageActivity extends BaseActivity
         public void setPrimaryItem(ViewGroup container, int position, Object object) {
             if (mCurrentFragment != object) {
                 mCurrentFragment = (Fragment) object;
+
+                if (mCurrentFragment instanceof AlertsPageFragment ) {
+                    mAlertFragment = mCurrentFragment;
+                }
             }
             super.setPrimaryItem(container, position, object);
         }
