@@ -97,6 +97,38 @@ void DS1307::setDOW(uint8_t dow)
 		_writeRegister(REG_DOW, dow);
 }
 
+void DS1307::setDOWAndroid(uint8_t dow) {
+  //Copying the weekdays int[]
+  // Mon Tue Wed Thu Fri Sat Sun
+  // 2   3   4   5   6   7   1        
+  uint8_t output = 0;
+  switch (dow)
+  {
+    case 2:
+      output=MONDAY;
+      break;
+    case 3:
+      output=TUESDAY;
+      break;
+    case 4:
+      output=WEDNESDAY;
+      break;
+    case 5:
+      output=THURSDAY;
+      break;
+    case 6:
+      output=FRIDAY;
+      break;
+    case 7:
+      output=SATURDAY;
+      break;
+    case 1:
+      output=SUNDAY;
+      break;
+  }     
+  _writeRegister(REG_DOW, output);
+}
+
 char *DS1307::getTimeStr(uint8_t format)
 {
 	char *output= "xxxxxxxx";
@@ -312,7 +344,7 @@ short DS1307::getDOWInt()
   return output;
 }
 
-int getTimeInSeconds() {
+int DS1307::getTimeInSeconds() {
   int output = 0;
   Time t;
   t=getTime();

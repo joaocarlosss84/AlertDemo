@@ -81,6 +81,7 @@ public:
 	void	setTime(uint8_t hour, uint8_t min, uint8_t sec);
 	void	setDate(uint8_t date, uint8_t mon, uint16_t year);
 	void	setDOW(uint8_t dow);
+  void  setDOWAndroid(uint8_t dow);
 
 	char	*getTimeStr(uint8_t format=FORMAT_LONG);
 	char	*getDateStr(uint8_t slformat=FORMAT_LONG, uint8_t eformat=FORMAT_LITTLEENDIAN, char divider='.');

@@ -27,7 +27,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * 
+ * NodeMCU V1.0 Lolin(V3)
+ * https://i2.wp.com/www.esploradores.com/wp-content/uploads/2016/08/PINOUT-NodeMCU_1.0-V2-y-V3.png?fit=1024%2C701
  * 
  * https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
  * https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/examples/SDWebServer/SDWebServer.ino
@@ -53,6 +54,7 @@
 #include <list>
 #include "EEPROM.h"
 #include "DebugFunctions.h"
+#include "DS1307.h"
 
 extern "C" { 
   #include<user_interface.h>
@@ -60,10 +62,14 @@ extern "C" {
 
 #define D1PIN 05 // 
 #define D2PIN 04 // 
+#define D4PIN 02 // 
+#define D5PIN 14 // 
 #define D6PIN 12 // Hardware Reset
 
 #define FANPIN D1PIN
 #define LEDPIN D2PIN //
+#define SDAPIN D4PIN
+#define SCLPIN D5PIN
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define INTERVAL_US 1000000
@@ -91,8 +97,6 @@ const char *pwdAP = "atmosphera2018";
 IPAddress ipAP(192, 168, 1, 2); //default value
 IPAddress gatewayAP(192, 168, 1, 1); //default value
 
-
-
 //String ssidSTA = "UNITEC_VISITANTES";
 //String pwdSTA = "Bem-vindo!"; 
 IPAddress ipSTA(10, 23, 5, 201);
@@ -107,6 +111,10 @@ String pwdSTA = "0071749692";
 
 //String ssidSTA = "JCSSAP";
 //String pwdSTA = "jcss8469"; 
+
+//Modulo RTC DS1307 
+DS1307 rtc(SDAPIN, SCLPIN); //SDA, SCL
+
 
 struct Alerts {
   Alerts() : iId(0), iTime(0), iDuration(0), bWeekdays(0) {}
@@ -426,6 +434,31 @@ void setup() {
 #if DEBUG
   WiFi.printDiag(Serial);
 #endif
+
+  //Turn on RTC
+  rtc.halt(false);
+  
+  //As linhas abaixo setam a data e hora do modulo
+  //e podem ser comentada apos a primeira utilizacao
+  //rtc.setDOW(TUESDAY);      //Define o dia da semana
+  //rtc.setTime(13, 19, 0);     //Define o horario
+  //rtc.setDate(7, 8, 2018);   //Define o dia, mes e ano
+  
+  //Definicoes do pino SQW/Out
+  rtc.setSQWRate(SQW_RATE_1);
+  rtc.enableSQW(true);
+
+  //Mostra as informações no Serial Monitor
+  Serial.print("Hora : ");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" ");
+  Serial.print("Data : ");
+  Serial.print(rtc.getDateStr(FORMAT_SHORT));
+  Serial.print(" ");
+  Serial.println(rtc.getDOWStr(FORMAT_SHORT));
+
+  //iCurrentTime = (iWeekday-1)*24*60*60 + iTime*60;
+  iCurrentTime = (rtc.getDOWInt() - 1)*24*60*60 + rtc.getTimeInSeconds();
 
   //DEBUGING WAKEUP
   for(int i=0; i<5; i++) {

@@ -63,6 +63,17 @@ void handleSetTime() {
   message += "\n";
   DEBUG_PRINTLN(message);
 
+  //rtc.setDOW(TUESDAY);      //Define o dia da semana
+  //rtc.setTime(13, 19, 0);     //Define o horario
+  //rtc.setDate(7, 8, 2018);   //Define o dia, mes e ano
+  rtc.setDOWAndroid(iWeekday);
+  
+  iTime = (iCurrentTime - ((iWeekday-1)*24*60*60));//time in seconds
+  short iHour = iTime/3600; 
+  short iMinutes = (iTime%3600) * 60;
+  short iSeconds = iTime % 60;
+  rtc.setTime(iHour, iMinutes, iSeconds);     //Define o horario
+
   server.send ( 200, "application/json", "{\"Status\":\"1\"}" );
       
 }
