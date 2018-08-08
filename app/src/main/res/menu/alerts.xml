@@ -22,9 +22,9 @@
         android:title="@string/action_updateAlerts"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_sendAlerts"
+        android:id="@+id/action_resetAlerts"
         android:orderInCategory="100"
-        android:title="@string/action_sendAlerts"
+        android:title="@string/action_resetAlerts"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_getAlerts"

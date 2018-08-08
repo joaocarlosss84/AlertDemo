@@ -5,7 +5,7 @@ import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.icu.util.Calendar;
+//import android.icu.util.Calendar;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.DialogFragment;
@@ -18,9 +18,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeSet;
+import java.util.Calendar;
 
 import static java.util.Calendar.FRIDAY;
 import static java.util.Calendar.MONDAY;
@@ -81,6 +83,11 @@ public class AddAlertDialog extends DialogFragment {
             if (aWeekdays != null) {
                 oSelectedWeekdays.addAll(aWeekdays);
             }
+        } else {
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat mdformat = new SimpleDateFormat("HH:mm");
+            String sTime = mdformat.format(calendar.getTime());
+            oTextViewTime.setText(sTime);
         }
 
         //Configure Dialog with Save and Cancel buttons

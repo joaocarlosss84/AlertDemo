@@ -141,8 +141,9 @@ public class AlertsPageFragment extends Fragment implements
         } else if (id == R.id.action_updateAlerts) {
             oAlertListAdapter.notifyDataSetChanged();
             return true;
-        } else if (id == R.id.action_sendAlerts) {
-            sendAlerts();
+        } else if (id == R.id.action_resetAlerts) {
+            //sendAlerts();
+            resetAlerts();
             return true;
         } else if (id == R.id.action_getAlerts) {
             getAlerts();
@@ -231,17 +232,7 @@ public class AlertsPageFragment extends Fragment implements
     }
 
     private void showAddAlert() {
-        Bundle args = new Bundle(); //Bundle containing data you are passing to the dialog
-        Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat mdformat = new SimpleDateFormat("HH:mm");
-        String sTime = mdformat.format(calendar.getTime());
-
-        //Set current time as default
-        args.putString(ALERT_TIME, sTime);
-        args.putString(ALERT_DURATION, "00:00");
-
         oAddAlert = new AddAlertDialog();
-        oAddAlert.setArguments(args);
         oAddAlert.show(fm, "Dialog Fragment");
     }
 
@@ -951,6 +942,7 @@ public class AlertsPageFragment extends Fragment implements
                         }
 
                         if (bSuccess[0]) {
+                            getTime();
                             Toast.makeText(oParent, "Success Setting Time", Toast.LENGTH_LONG).show();
                         } else {
                             Toast.makeText(oParent, "Error on Setting Time", Toast.LENGTH_LONG).show();
@@ -1032,6 +1024,48 @@ public class AlertsPageFragment extends Fragment implements
         });
 
         oAlertDialog.show();
+    }
+
+    private void resetAlerts() {
+        final AlertsPageActivity oParent = (AlertsPageActivity) this.getActivity();
+        String requestPath = "http://"+ oParent.mBeaconIP + "/reset";
+
+        JsonObjectRequest JsonRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                requestPath,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        int Status = -1;
+                        try {
+                            Status = response.getInt("Status");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (Status == 1) {
+                            Toast.makeText(oParent, "Success Erasing EEPROM", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(oParent, "Error Erasing EEPROM", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                },
+
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(oParent, "Error Erasing EEPROM", Toast.LENGTH_LONG).show();
+                        //master.addInventoryServerCallback(serverResponse);
+                    }
+                }
+        );
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Application.getVolleyRequestQueue();
+
+        // Add the request to the RequestQueue.
+        queue.add(JsonRequest);
     }
 
 }

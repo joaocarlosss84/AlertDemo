@@ -390,9 +390,9 @@ public class BLEActivity extends BaseActivity implements
         } else if (id == R.id.action_updateAlerts) {
             oAlertListAdapter.notifyDataSetChanged();
             return true;
-        } else if (id == R.id.action_sendAlerts) {
-            sendAlerts();
-            return true;
+        //} else if (id == R.id.action_sendAlerts) {
+        //    sendAlerts();
+        //    return true;
         } else if (id == R.id.action_getAlerts) {
             getAlerts();
             return true;
