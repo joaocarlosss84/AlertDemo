@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.List;
+import java.util.Timer;
 
 public class AlertsPageActivity extends BaseActivity
         implements  AlertsPageFragment.OnFragmentInteractionListener,
@@ -46,6 +47,9 @@ public class AlertsPageActivity extends BaseActivity
     private WifiInfo mWifiInit;
     private WifiInfo mWifiInfo;
     private WifiManager wifi;
+    private Timer oTimerBeacon;
+    private Runnable oRunnableBeacon;
+    private Handler oBeaconHandler;
 
     private Fragment mCurrentFragment;
     private Fragment mAlertFragment;
@@ -108,6 +112,7 @@ public class AlertsPageActivity extends BaseActivity
         mBeaconIP = "";
         mBeaconName = "";
 
+        oTimerBeacon = new Timer();
         getBeaconIP();
     }
 
@@ -202,6 +207,11 @@ public class AlertsPageActivity extends BaseActivity
 
     public void changeToNextFragment() {
         if (mViewPager.getCurrentItem() < mSectionsPagerAdapter.getCount()) {
+
+            if (oBeaconHandler != null && oRunnableBeacon != null) {
+                oBeaconHandler.removeCallbacks(oRunnableBeacon);
+            }
+
             changeToFragment(mViewPager.getCurrentItem()+1);
         }
     }
@@ -232,17 +242,63 @@ public class AlertsPageActivity extends BaseActivity
         mBeaconIP = sBeaconIP;
         mBeaconName = sBeaconName;
 
-        if (mAlertFragment instanceof  AlertsPageFragment) {
-            ((AlertsPageFragment) mAlertFragment).refreshBeacon();
+        /*
+        oTimerBeacon.scheduleAtFixedRate(new TimerTask() {
+                                  @Override
+                                  public void run() {
+                                      //Called each time when 1000 milliseconds (1 second) (the period parameter)
+                                      if (mAlertFragment instanceof  AlertsPageFragment) {
+                                          if (((AlertsPageFragment) mAlertFragment).bLoaded) {
+                                              changeToNextFragment();
+                                          }
+                                      }
+                                  }
+                              },
+                //Set how long before to start calling the TimerTask (in milliseconds)
+                0,
+                //Set the amount of time between each execution (in milliseconds)
+                500);
+        */
+
+        // Create the Handler object (on the main thread by default)
+        if (oBeaconHandler == null) {
+            oBeaconHandler = new Handler();
         }
 
+        // Define the code block to be executed
+        if (oRunnableBeacon == null) {
+            oRunnableBeacon = new Runnable() {
+                @Override
+                public void run() {
+                    // Do something here on the main thread
+                    if (mAlertFragment instanceof AlertsPageFragment) {
+                        if (((AlertsPageFragment) mAlertFragment).bLoaded) {
+                            changeToNextFragment();
+                        } else {
+                            ((AlertsPageFragment) mAlertFragment).refreshBeacon();
+                        }
+                    }
+                    // Repeat this the same runnable code block again another 1 seconds
+                    oBeaconHandler.postDelayed(oRunnableBeacon, 1000);
+                }
+            };
+        }
+        // Start the initial runnable task by posting through the handler
+        oBeaconHandler.post(oRunnableBeacon);
+
+        /*
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                changeToNextFragment();
+                if (mAlertFragment instanceof  AlertsPageFragment) {
+                    if (((AlertsPageFragment) mAlertFragment).bLoaded) {
+                        changeToNextFragment();
+                    }
+                }
             }
-        }, 2000);
+        }, 500);
+        */
         /*
         changeToNextFragment();
         if (mCurrentFragment instanceof  AlertsPageFragment) {
@@ -303,8 +359,8 @@ public class AlertsPageActivity extends BaseActivity
             if (position == 0) {
                 return ScanWifiFragment.newInstance(ScanWifiFragment.WIFIFRAGMENT, "wifi");
             } else if (position == 1) {
-                Fragment oFrag = AlertsPageFragment.newInstance("Alert", "wifi");
-                return oFrag;
+                mAlertFragment = AlertsPageFragment.newInstance("Alert", "wifi");
+                return mAlertFragment;
             } else {
                 return PlaceholderFragment.newInstance(position + 1);
             }

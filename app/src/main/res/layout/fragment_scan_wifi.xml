@@ -36,11 +36,12 @@
             android:layout_height="match_parent"
             android:layout_marginTop="20dp"></ListView>
 
-        <TextView android:id="@id/android:empty"
+        <TextView
+            android:id="@id/android:empty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FF0000"
-            android:text="No data"/>
+            android:text="No beacon found"
+            android:textSize="18sp" />
 
     </LinearLayout>
 

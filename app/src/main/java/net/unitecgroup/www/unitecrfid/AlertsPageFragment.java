@@ -84,6 +84,7 @@ public class AlertsPageFragment extends Fragment implements
     FloatingActionButton fab;
     AddAlertDialog oAddAlert;
 
+    public boolean bLoaded = false;
     static AlertListAdapter oAlertListAdapter;
     RecyclerView mRecyclerView;
     DatabaseTable mDB;
@@ -216,6 +217,8 @@ public class AlertsPageFragment extends Fragment implements
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.mainListView);
 
         mDB = Application.getDatabase();
+
+        bLoaded = false;
 
         // Reading all contacts
         ArrayList<Alert> alerts = new ArrayList<Alert>();  //mDB.getAllAlerts();
@@ -829,6 +832,8 @@ public class AlertsPageFragment extends Fragment implements
         "weekday": 1,
         "time": "02:21"
         */
+
+        bLoaded = true;
 
         try {
             int iTimestamp = oJS.getInt("timestamp");
